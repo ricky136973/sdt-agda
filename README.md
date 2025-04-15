@@ -1,1 +1,1 @@
-# sdt-agda
+# SDT Agda
