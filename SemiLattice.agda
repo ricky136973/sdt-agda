@@ -14,7 +14,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Nat
 
 ≡-Σ : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} {x y : Σ-syntax A B} →
-  (p : fst x ≡ fst y) → PathP (λ i → B (p i)) (snd x) (snd y) → x ≡ y
+  (p : fst x ≡ fst y) → (λ i → B (p i)) [ snd x ≡ snd y ] → x ≡ y
 ≡-Σ p P i = p i , P i
 
 infix 20 _≼_
@@ -40,8 +40,8 @@ opaque
   ≼-trans : ∀ {x y z} → x ≼ y → y ≼ z → x ≼ z
   ≼-trans x≼y y≼z φ = y≼z (x≼y φ)
 
-  ≼-partial : ∀ {x y} → x ≼ y → y ≼ x → x ≡ y
-  ≼-partial x≼y y≼x =
+  ≼-antisym : ∀ {x y} → x ≼ y → y ≼ x → x ≡ y
+  ≼-antisym x≼y y≼x =
     defIsMono (isoToPath (iso x≼y y≼x (λ _ → defIsProp _ _) λ _ → defIsProp _ _))
 
   s0-min : ∀ {x} → s0 ≼ x
@@ -87,10 +87,10 @@ opaque
   x⊓y≼y φ = SΣ-≼R (SΣ-≼L φ) φ
 
   x⊓y=x : ∀ {x y} → x ≼ y → x ⊓ y ≡ x
-  x⊓y=x x≼y = ≼-partial x⊓y≼x λ φ → transport (sym SΣ-def) (φ , x≼y φ)
+  x⊓y=x x≼y = ≼-antisym x⊓y≼x λ φ → transport (sym SΣ-def) (φ , x≼y φ)
 
   x⊓y=y : ∀ {x y} → y ≼ x → x ⊓ y ≡ y
-  x⊓y=y y≼x = ≼-partial x⊓y≼y λ φ → transport (sym SΣ-def) (y≼x φ , φ)
+  x⊓y=y y≼x = ≼-antisym x⊓y≼y λ φ → transport (sym SΣ-def) (y≼x φ , φ)
 
   0⊓x=0 : ∀ {x} → s0 ⊓ x ≡ s0
   0⊓x=0 = x⊓y=x s0-min
@@ -104,6 +104,17 @@ opaque
   x⊓1=x : ∀ {x} → x ⊓ s1 ≡ x
   x⊓1=x = x⊓y=x s1-max
 
+  ⊓-idem : ∀ {x} → x ⊓ x ≡ x
+  ⊓-idem = x⊓y=x ≼-refl
+
+  ⊓-comm : ∀ {x y} → x ⊓ y ≡ y ⊓ x
+  ⊓-comm =
+    defIsMono (SΣ-def ∙ isoToPath Σ-swap-Iso ∙ sym SΣ-def)
+
+  ⊓-assoc : ∀ {x y z} → x ⊓ (y ⊓ z) ≡ (x ⊓ y) ⊓ z
+  ⊓-assoc =
+    defIsMono (SΣ-def ∙ (cong (_×_ _) SΣ-def) ∙ sym (SΣ-def ∙ cong (λ P → P × _) SΣ-def ∙ isoToPath Σ-assoc-Iso))
+
   ⊓-monotoneL : ∀ {x y z} → x ≼ y → x ⊓ z ≼ y ⊓ z
   ⊓-monotoneL x≼y φ =
     let ⟦x⟧ , ⟦z⟧ = transport SΣ-def φ in
@@ -113,10 +124,17 @@ opaque
   ⊓-monotoneR y≼z φ =
     let ⟦x⟧ , ⟦y⟧ = transport SΣ-def φ in
     transport (sym SΣ-def) (⟦x⟧ , y≼z ⟦y⟧)
+  
+  ⊓-monotone : ∀ {w x y z} → w ≼ y → x ≼ z → w ⊓ x ≼ y ⊓ z
+  ⊓-monotone w≼y x≼z φ = ⊓-monotoneL w≼y (⊓-monotoneR x≼z φ)
 
 □ : ℕ → Type ℓ₀
 □ zero = Unit*
 □ (suc n) = S × □ n
+
+δ : ∀ {n} → S → □ n
+δ {zero} _ = tt*
+δ {suc _} s = s , δ s
 
 infix 20 _≼□_
 infix 20 _≽□_
@@ -203,8 +221,26 @@ opaque
 □↑ : ℕ → Type ℓ₀
 □↑ n = Σ[ x ∈ □ n ] increasing x
 
+□↑≡ : ∀ {n} {x y : □↑ n} → fst x ≡ fst y → x ≡ y
+□↑≡ = Σ≡Prop (λ _ → increasingIsProp)
+
+δ↑ : ∀ {n} → S → □↑ n
+δ↑ s .fst = δ s
+δ↑ {0} _ .snd = tt*
+δ↑ {1} _ .snd = tt*
+δ↑ {suc (suc _)} s .snd = ≼-refl , δ↑ s .snd
+
 □↓ : ℕ → Type ℓ₀
 □↓ n = Σ[ x ∈ □ n ] decreasing x
+
+□↓≡ : ∀ {n} {x y : □↓ n} → fst x ≡ fst y → x ≡ y
+□↓≡ = Σ≡Prop (λ _ → decreasingIsProp)
+
+δ↓ : ∀ {n} → S → □↓ n
+δ↓ s .fst = δ s
+δ↓ {0} _ .snd = tt*
+δ↓ {1} _ .snd = tt*
+δ↓ {suc (suc _)} s .snd = ≼-refl , δ↓ s .snd
 
 L□→□-decreasing : ∀ {n} {x : L (□ n)} → (∀ φ → decreasing (x .snd φ)) → decreasing (L□→□ x)
 L□→□-decreasing {0} _ = tt*
@@ -229,15 +265,11 @@ L□↓≅□↓ .Iso.inv = □↓→L□↓
 
 L□↓≅□↓ {zero} .Iso.rightInv _ = refl
 L□↓≅□↓ {suc _} .Iso.rightInv (_ , P , Q) =
-  Σ≡Prop
-    (λ _ → isProp× ≼-isProp decreasingIsProp)
-    (≡-× refl (≡-× (x⊓y=y P) (L□→□≡ (decreasing→≽□ (decreasing-≽ P Q)))))
+  □↓≡ (≡-× refl (≡-× (x⊓y=y P) (L□→□≡ (decreasing→≽□ (decreasing-≽ P Q)))))
 
 L□↓≅□↓ {zero} .Iso.leftInv _ = refl
 L□↓≅□↓ {suc n} .Iso.leftInv (s , t) =
-  ≡-Σ refl (funExt λ φ → Σ≡Prop
-    (λ _ → decreasingIsProp)
-    (≡-× SΣ-φ (L□→□≡φ (λ φ → decreasing→≽□ (decreasing-≽ (λ _ → φ) (t φ .snd))))))
+  ≡-Σ refl (funExt (λ φ → □↓≡ (≡-× SΣ-φ (L□→□≡φ (λ φ → decreasing→≽□ (decreasing-≽ (λ _ → φ) (t φ .snd)))))))
 
 L□↓≡□↓ : ∀ {n} → L (□↓ n) ≡ □↓ (suc n)
 L□↓≡□↓ = isoToPath L□↓≅□↓

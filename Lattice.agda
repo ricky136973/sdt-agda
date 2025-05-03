@@ -9,7 +9,6 @@ open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.HLevels
 
 open import Cubical.Data.Sigma
-open import Cubical.Data.Empty renaming (rec to rec⊥)
 open import Cubical.Data.Unit
 open import Cubical.Data.Nat
 
@@ -21,10 +20,10 @@ infix 30 _⊔_
 _⊎_ = join
 
 rec⊎ : ∀ {ℓ₁ ℓ₂ ℓ₃} {A : Type ℓ₁} {B : Type ℓ₂} {C : Type ℓ₃}
-  (f : A → C) (g : B → C) (p : ∀ x y → f x ≡ g y) (x : A ⊎ B) → C
-rec⊎ f g p (inl x) = f x
-rec⊎ f g p (inr y) = g y
-rec⊎ f g p (push a b i) = p a b i
+  (f : A → C) (g : B → C) (p : ∀ x y → f x ≡ g y) → A ⊎ B → C
+rec⊎ f _ _ (inl x) = f x
+rec⊎ _ g _ (inr y) = g y
+rec⊎ _ _ p (push a b i) = p a b i
 
 postulate _⊔_ : S → S → S
 postulate ⊔-def : ∀ {x y} → ⟦ x ⊔ y ⟧ ≡ ⟦ x ⟧ ⊎ ⟦ y ⟧
@@ -37,10 +36,10 @@ opaque
   y≼x⊔y φ = transport (sym ⊔-def) (inr φ)
 
   x⊔y=x : ∀ {x y} → y ≼ x → x ⊔ y ≡ x
-  x⊔y=x y≼x = ≼-partial (λ φ → rec⊎ (λ φ → φ) y≼x (λ _ _ → defIsProp _ _) (transport ⊔-def φ)) x≼x⊔y
+  x⊔y=x y≼x = ≼-antisym (λ φ → rec⊎ (λ φ → φ) y≼x (λ _ _ → defIsProp _ _) (transport ⊔-def φ)) x≼x⊔y
 
   x⊔y=y : ∀ {x y} → x ≼ y → x ⊔ y ≡ y
-  x⊔y=y x≼y = ≼-partial (λ φ → rec⊎ x≼y (λ φ → φ) (λ _ _ → defIsProp _ _) (transport ⊔-def φ)) y≼x⊔y
+  x⊔y=y x≼y = ≼-antisym (λ φ → rec⊎ x≼y (λ φ → φ) (λ _ _ → defIsProp _ _) (transport ⊔-def φ)) y≼x⊔y
 
   0⊔x=x : ∀ {x} → s0 ⊔ x ≡ x
   0⊔x=x = x⊔y=y s0-min
@@ -53,6 +52,17 @@ opaque
 
   x⊔1=1 : ∀ {x} → x ⊔ s1 ≡ s1
   x⊔1=1 = x⊔y=y s1-max
+
+  ⊔-idem : ∀ {x} → x ⊔ x ≡ x
+  ⊔-idem = x⊔y=x ≼-refl
+
+  ⊔-comm : ∀ {x y} → x ⊔ y ≡ y ⊔ x
+  ⊔-comm =
+    defIsMono (⊔-def ∙ isoToPath join-comm ∙ sym ⊔-def)
+
+  ⊔-assoc : ∀ {x y z} → x ⊔ (y ⊔ z) ≡ (x ⊔ y) ⊔ z
+  ⊔-assoc =
+    defIsMono (⊔-def ∙ (cong (_⊎_ _) ⊔-def) ∙ sym (⊔-def ∙ cong (λ P → P ⊎ _) ⊔-def ∙ join-assoc _ _ _))
 
   ⊔-monotoneL : ∀ {x y z} → x ≼ y → x ⊔ z ≼ y ⊔ z
   ⊔-monotoneL x≼y φ =
@@ -69,31 +79,173 @@ opaque
       (λ φ → transport (sym ⊔-def) (inr (y≼z φ)))
       (λ _ _ → defIsProp _ _)
       (transport ⊔-def φ)
+  
+  ⊔-monotone : ∀ {w x y z} → w ≼ y → x ≼ z → w ⊔ x ≼ y ⊔ z
+  ⊔-monotone w≼y x≼z φ = ⊔-monotoneL w≼y (⊔-monotoneR x≼z φ)
 
-interpole : S → S → S → S
-interpole s t x = s ⊔ x ⊓ t
+interpolate : S → S → S → S
+interpolate s t x = s ⊔ x ⊓ t
 
-postulate SLinear : {f : S → S} → f ≡ interpole (f s0) (f s1)
+postulate SLinear : {f : S → S} → f ≡ interpolate (f s0) (f s1)
 
-opaque
-  SMonotone : ∀ {x y} (f : S → S) → x ≼ y → f x ≼ f y
-  SMonotone {x} {y} f x≼y =
-    transport (sym (cong (λ f → f x ≼ f y) SLinear)) (⊔-monotoneR (⊓-monotoneL x≼y))
+SMonotone : ∀ {x y} (f : S → S) → x ≼ y → f x ≼ f y
+SMonotone {x} {y} f x≼y =
+  transport (sym (cong (λ f → f x ≼ f y) SLinear)) (⊔-monotoneR (⊓-monotoneL x≼y))
 
-  SFunExt : ∀ {f g : S → S} → f s0 ≡ g s0 → f s1 ≡ g s1 → f ≡ g
-  SFunExt {f} {g} p q =
-    transport (sym (cong₂ _≡_ SLinear SLinear)) (funExt λ s → cong₂ (λ x y → interpole x y s) p q)
+SFunExt : ∀ {f g : S → S} → f s0 ≡ g s0 → f s1 ≡ g s1 → f ≡ g
+SFunExt {f} {g} p q =
+  transport (sym (cong₂ _≡_ SLinear SLinear)) (funExt λ s → cong₂ (λ x y → interpolate x y s) p q)
 
 Phoa : Iso (S → S) (□↓ 2)
 Phoa .Iso.fun f = (f s1 , f s0 , tt*) , SMonotone f s1-max , tt*
-Phoa .Iso.inv ((t , s , _) , _) = interpole s t
+Phoa .Iso.inv ((t , s , _) , _) = interpolate s t
 Phoa .Iso.rightInv ((t , s , _) , P , _) =
-  Σ≡Prop
-    (λ _ → isProp× ≼-isProp isPropUnit*)
-    (≡-×
-      ((x⊔y=y (≼-trans P (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)
-      (≡-× (x⊔y=x (≼-trans x⊓y≼x s0-min)) refl))
+  □↓≡ ((≡-×
+    ((x⊔y=y (≼-trans P (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)
+    (≡-× (x⊔y=x (≼-trans x⊓y≼x s0-min)) refl)))
 Phoa .Iso.leftInv f =
   SFunExt
     (x⊔y=x (≼-trans (≼-reflP 0⊓x=0) s0-min))
     ((x⊔y=y (≼-trans (SMonotone f s1-max) (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)
+
+-------------------------------------------------------------
+
+infix 20 _□≼□_
+infix 20 _□≽□_
+
+_□≼□_ : ∀ {n} → □ n → □ n → Type ℓ₀
+_□≼□_ {zero} _ _ = Unit*
+_□≼□_ {suc _} (s , x) (t , y) = s ≼ t × x □≼□ y
+
+_□≽□_ : ∀ {n} → □ n → □ n → Type ℓ₀
+x □≽□ y = y □≼□ x
+
+opaque
+  □≼□-isProp : ∀ {n} {x y : □ n} → isProp (x □≼□ y)
+  □≼□-isProp {zero} = isPropUnit*
+  □≼□-isProp {suc _} = isProp× ≼-isProp □≼□-isProp
+
+  □≼□-refl : ∀ {n} {x : □ n} → x □≼□ x
+  □≼□-refl {zero} = tt*
+  □≼□-refl {suc _} = ≼-refl , □≼□-refl
+
+  □≼□-reflP : ∀ {n} {x y : □ n} → x ≡ y → x □≼□ y
+  □≼□-reflP {zero} _ = tt*
+  □≼□-reflP {suc _} p = ≼-reflP (cong fst p) , □≼□-reflP (cong snd p)
+
+  □≼□-trans : ∀ {n} {x y z : □ n} → x □≼□ y → y □≼□ z → x □≼□ z
+  □≼□-trans {zero} _ _ = tt*
+  □≼□-trans {suc _} (P , Q) (R , S) = ≼-trans P R , □≼□-trans Q S
+
+  □≼□-antisym : ∀ {n} {x y : □ n} → x □≼□ y → y □≼□ x → x ≡ y
+  □≼□-antisym {zero} _ _ = refl
+  □≼□-antisym {suc _} (P , Q) (R , S) = ≡-× (≼-antisym P R) (□≼□-antisym Q S)
+
+□-map : ∀ {n} → (S → S) → □ n → □ n
+□-map {zero} f _ = tt*
+□-map {suc _} f (s , x) = f s , □-map f x
+
+□-map-comp : ∀ {n f g} {x : □ n} → □-map f (□-map g x) ≡ □-map (λ x → f (g x)) x
+□-map-comp {zero} = refl
+□-map-comp {suc _} = ≡-× refl □-map-comp
+
+□↑-map : ∀ {n} → (S → S) → □↑ n → □↑ n
+□↑-map f (x , _) .fst = □-map f x
+□↑-map {0} _ _ .snd = tt*
+□↑-map {1} _ _ .snd = tt*
+□↑-map {suc (suc _)} f ((s , t , x) , P , Q) .snd = SMonotone f P , □↑-map f ((t , x) , Q) .snd
+
+□↓-map : ∀ {n} → (S → S) → □↓ n → □↓ n
+□↓-map f (x , _) .fst = □-map f x
+□↓-map {0} _ _ .snd = tt*
+□↓-map {1} _ _ .snd = tt*
+□↓-map {suc (suc _)} f ((s , t , x) , P , Q) .snd = SMonotone f P , □↓-map f ((t , x) , Q) .snd
+
+SMonotoneN : ∀ {n} {x y : □ n} (f : □ n → S) → x □≼□ y → f x ≼ f y
+SMonotoneN {zero} _ _ = ≼-refl
+SMonotoneN {suc n} {s , x} {t , y} f (P , Q) =
+  ≼-trans (SMonotone (λ s → f (s , x)) P) (SMonotoneN (λ x → f (t , x)) Q)
+
+fold⊔ : ∀ {n} → □ n → □ n
+fold⊔ {zero} _ = tt*
+fold⊔ {suc _} (s , x) = s , □-map (_⊔_ s) (fold⊔ x)
+
+fold⊔≡id : ∀ {n} {x : □↑ n} → fold⊔ (fst x) ≡ fst x
+fold⊔≡id {0} = refl
+fold⊔≡id {1} = refl
+fold⊔≡id {suc (suc _)} {(_ , _ , x) , s≼t , P} =
+  ≡-× refl (≡-× (x⊔y=y s≼t) (
+    □-map-comp ∙
+    cong (λ f → □-map f (fold⊔ x)) (funExt λ x → ⊔-assoc ∙ cong (λ y → y ⊔ x) (x⊔y=y s≼t)) ∙
+    cong snd (fold⊔≡id {x = _ , P})))
+
+fold⊔-increasing : ∀ {n} {x : □ n} → increasing (fold⊔ x)
+fold⊔-increasing {0} = tt*
+fold⊔-increasing {1} = tt*
+fold⊔-increasing {suc (suc _)} {_ , _ , x} =
+  x≼x⊔y ,
+  transport
+    (sym (cong increasing (≡-× refl (□-map-comp ∙ cong (λ f → □-map f (fold⊔ x)) (funExt λ _ → ⊔-assoc)))))
+    fold⊔-increasing
+
+fold⊔↑ : ∀ {n} → □ n → □↑ n
+fold⊔↑ x = fold⊔ x , fold⊔-increasing
+
+fold⊔↑≡id : ∀ {n} {x : □↑ n} → fold⊔↑ (fst x) ≡ x
+fold⊔↑≡id {x = x} = □↑≡ (fold⊔≡id {x = x})
+
+fold⊓ : ∀ {n} → □ n → □ n
+fold⊓ {zero} _ = tt*
+fold⊓ {suc _} (s , x) = s , □-map (_⊓_ s) (fold⊓ x)
+
+fold⊓≡id : ∀ {n} {x : □↓ n} → fold⊓ (fst x) ≡ fst x
+fold⊓≡id {0} = refl
+fold⊓≡id {1} = refl
+fold⊓≡id {suc (suc _)} {(_ , _ , x) , s≽t , P} =
+  ≡-× refl (≡-× (x⊓y=y s≽t) (
+    □-map-comp ∙
+    cong (λ f → □-map f (fold⊓ x)) (funExt λ x → ⊓-assoc ∙ cong (λ y → y ⊓ x) (x⊓y=y s≽t)) ∙
+    cong snd (fold⊓≡id {x = _ , P})))
+
+fold⊓-decreasing : ∀ {n} {x : □ n} → decreasing (fold⊓ x)
+fold⊓-decreasing {0} = tt*
+fold⊓-decreasing {1} = tt*
+fold⊓-decreasing {suc (suc _)} {_ , _ , x} =
+  x⊓y≼x ,
+  transport
+    (sym (cong decreasing (≡-× refl (□-map-comp ∙ cong (λ f → □-map f (fold⊓ x)) (funExt λ _ → ⊓-assoc)))))
+    fold⊓-decreasing
+
+fold⊓↓ : ∀ {n} → □ n → □↓ n
+fold⊓↓ x = fold⊓ x , fold⊓-decreasing
+
+fold⊓↓≡id : ∀ {n} {x : □↓ n} → fold⊓↓ (fst x) ≡ x
+fold⊓↓≡id {x = x} = □↓≡ (fold⊓≡id {x = x})
+
+extend↑ : ∀ {n} (f : □↑ n → S) → Σ[ f̃ ∈ (□ n → S) ] ∀ {x} → f̃ (fst x) ≡ f x
+extend↑ f = (λ x → f (fold⊔↑ x)) , cong f fold⊔↑≡id
+
+extend↓ : ∀ {n} (f : □↓ n → S) → Σ[ f̃ ∈ (□ n → S) ] ∀ {x} → f̃ (fst x) ≡ f x
+extend↓ f = (λ x → f (fold⊓↓ x)) , cong f fold⊓↓≡id
+
+SMonotoneN↑ : ∀ {n x y} (f : □↑ n → S) → fst x □≼□ fst y → f x ≼ f y
+SMonotoneN↑ f x≼y =
+  let f̃ , P = extend↑ f in
+  ≼-trans (≼-reflP (sym P)) (≼-trans (SMonotoneN f̃ x≼y) (≼-reflP P))
+
+SMonotoneN↓ : ∀ {n x y} (f : □↓ n → S) → fst x □≼□ fst y → f x ≼ f y
+SMonotoneN↓ f x≼y =
+  let f̃ , P = extend↓ f in
+  ≼-trans (≼-reflP (sym P)) (≼-trans (SMonotoneN f̃ x≼y) (≼-reflP P))
+
+zip : ∀ {n} → □ n → □ n → S
+zip {zero} _ _ = s0
+zip {suc _} (s , x) (t , y) = s ⊓ t ⊔ zip x y
+
+zip-monotoneL : ∀ {n} {x y z : □ n} → x □≼□ y → zip x z ≼ zip y z
+zip-monotoneL {zero} _ = ≼-refl
+zip-monotoneL {suc _} (P , Q) = ⊔-monotone (⊓-monotoneL P) (zip-monotoneL Q)
+
+zip-monotoneR : ∀ {n} {x y z : □ n} → y □≼□ z → zip x y ≼ zip x z
+zip-monotoneR {zero} _ = ≼-refl
+zip-monotoneR {suc _} (P , Q) = ⊔-monotone (⊓-monotoneR P) (zip-monotoneR Q)
