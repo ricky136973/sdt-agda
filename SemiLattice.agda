@@ -2,7 +2,7 @@
 
 module SemiLattice where
 
-open import PreSDT renaming (def to ⟦_⟧) public
+open import PreSDT renaming (def to ⟦_⟧ ; map to L-map) public
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
@@ -128,9 +128,51 @@ opaque
   ⊓-monotone : ∀ {w x y z} → w ≼ y → x ≼ z → w ⊓ x ≼ y ⊓ z
   ⊓-monotone w≼y x≼z φ = ⊓-monotoneL w≼y (⊓-monotoneR x≼z φ)
 
+module FiniteList where
+  variable ℓ ℓ' : Level
+  variable A : Type ℓ
+  variable B : Type ℓ'
+
+  FiniteList : (A : Type ℓ) → ℕ → Type ℓ
+  FiniteList A zero = Unit*
+  FiniteList A (suc n) = A × FiniteList A n
+
+  drop : ∀ {n} → FiniteList A (suc n) → FiniteList A n
+  drop {n = zero} _ = tt*
+  drop {n = suc _} (x , xs) = x , drop xs
+
+  append : ∀ {n} → FiniteList A n → A → FiniteList A (suc n)
+  append {n = zero} _ y = y , tt*
+  append {n = suc _} (x , xs) y = x , append xs y
+
+  map : (A → B) → ∀ {n} → FiniteList A n → FiniteList B n
+  map f {zero} _ = tt*
+  map f {suc _} (x , xs) = f x , map f xs
+
+  IsMonotonic : {A : Type ℓ} (R : A → A → Type ℓ') → ∀ {n} → FiniteList A n → Type (ℓ-max ℓ ℓ')
+  IsMonotonic R {0} _ = Unit*
+  IsMonotonic R {1} _ = Unit*
+  IsMonotonic R {suc (suc n)} (x , y , z) = (R x y) × (IsMonotonic R (y , z))
+  
+  IsMonotonicIsProp :{A : Type ℓ} {R : A → A → Type ℓ'}
+    → (∀ x y → isProp (R x y))
+    → ∀ {n} {x : FiniteList A n} → isProp (IsMonotonic R x)
+  IsMonotonicIsProp _ {0} = isPropUnit*
+  IsMonotonicIsProp _ {1} = isPropUnit*
+  IsMonotonicIsProp RisProp {suc (suc _)} = isProp× (RisProp _ _) (IsMonotonicIsProp RisProp)
+
+  map-monotone :
+    ∀ {ℓ'' ℓ'''} {R : A → A → Type ℓ''} {R' : B → B → Type ℓ'''}
+    (f : A → B) (r : ∀ x y → R x y → R' (f x) (f y)) →
+    ∀ {n} {x : FiniteList A n} → IsMonotonic R x → IsMonotonic R' (map f x)
+  map-monotone _ _ {0} _ = tt*
+  map-monotone _ _ {1} _ = tt*
+  map-monotone _ r {suc (suc _)} (Rxy , P) = r _ _ Rxy , map-monotone _ r P
+
+open FiniteList
+
 □ : ℕ → Type ℓ₀
-□ zero = Unit*
-□ (suc n) = S × □ n
+□ = FiniteList S
 
 δ : ∀ {n} → S → □ n
 δ {zero} _ = tt*
@@ -181,15 +223,11 @@ opaque
   L□→□≡φ {suc _} P = ≡-× SΣ-φ (L□→□≡φ (λ φ → P φ .snd))
 
 increasing : ∀ {n} → □ n → Type ℓ₀
-increasing {0} _ = Unit*
-increasing {1} _ = Unit*
-increasing {suc (suc _)} (x , y , z) = (x ≼ y) × increasing (y , z)
+increasing = IsMonotonic _≼_
 
 opaque
   increasingIsProp : ∀ {n} {x : □ n} → isProp (increasing x)
-  increasingIsProp {0} = isPropUnit*
-  increasingIsProp {1} = isPropUnit*
-  increasingIsProp {suc (suc _)} = isProp× ≼-isProp increasingIsProp
+  increasingIsProp = IsMonotonicIsProp λ _ _ → ≼-isProp
 
   increasing-≼ : ∀ {n s t} {x : □ n} → s ≼ t → increasing (t , x) → increasing (s , x)
   increasing-≼ {zero} _ _ = tt*
@@ -200,15 +238,11 @@ opaque
   increasing→≼□ {suc _} (P , Q) = P , increasing→≼□ (increasing-≼ P Q)
 
 decreasing : ∀ {n} → □ n → Type ℓ₀
-decreasing {0} _ = Unit*
-decreasing {1} _ = Unit*
-decreasing {suc (suc n)} (x , y , z) = (x ≽ y) × decreasing (y , z)
+decreasing = IsMonotonic _≽_
 
 opaque
   decreasingIsProp : ∀ {n} {x : □ n} → isProp (decreasing x)
-  decreasingIsProp {0} = isPropUnit*
-  decreasingIsProp {1} = isPropUnit*
-  decreasingIsProp {suc (suc _)} = isProp× ≼-isProp decreasingIsProp
+  decreasingIsProp = IsMonotonicIsProp λ _ _ → ≼-isProp
 
   decreasing-≽ : ∀ {n s t} {x : □ n} → s ≽ t → decreasing (t , x) → decreasing (s , x)
   decreasing-≽ {zero} _ _ = tt*
@@ -224,6 +258,33 @@ opaque
 □↑≡ : ∀ {n} {x y : □↑ n} → fst x ≡ fst y → x ≡ y
 □↑≡ = Σ≡Prop (λ _ → increasingIsProp)
 
+□↑-d0 : ∀ {n} → □↑ (suc n) → □↑ n
+□↑-d0 {0} _ = tt* , tt*
+□↑-d0 {suc _} ((_ , x) , _) .fst = x
+□↑-d0 {1} _ .snd = tt*
+□↑-d0 {suc (suc _)} (_ , _ , P) .snd = P
+
+□↑-d1 : ∀ {n} → □↑ (suc n) → □↑ n
+□↑-d1 (x , _) .fst = drop x
+□↑-d1 {0} _ .snd = tt*
+□↑-d1 {1} _ .snd = tt*
+□↑-d1 {suc (suc _)} ((x , y , xs) , x≼y , P) .snd = x≼y , □↑-d1 ((y , xs) , P) .snd
+
+□↑-s0 : ∀ {n} → □↑ n → □↑ (suc n)
+□↑-s0 (x , _) .fst = s0 , x
+□↑-s0 {0} _ .snd = tt*
+□↑-s0 {suc _} _ .snd .fst = s0-min
+□↑-s0 {1} _ .snd .snd = tt*
+□↑-s0 {suc (suc _)} (_ , P) .snd .snd = P
+
+□↑-s1 : ∀ {n} → □↑ n → □↑ (suc n)
+□↑-s1 (x , _) .fst = append x s1
+□↑-s1 {0} _ .snd = tt*
+□↑-s1 {1} _ .snd .fst = s1-max
+□↑-s1 {suc (suc _)} (_ , s≼t , _) .snd .fst = s≼t
+□↑-s1 {1} _ .snd .snd = tt*
+□↑-s1 {suc (suc _)} ((_ , x) , _ , P) .snd .snd = □↑-s1 (x , P) .snd
+
 δ↑ : ∀ {n} → S → □↑ n
 δ↑ s .fst = δ s
 δ↑ {0} _ .snd = tt*
@@ -235,6 +296,33 @@ opaque
 
 □↓≡ : ∀ {n} {x y : □↓ n} → fst x ≡ fst y → x ≡ y
 □↓≡ = Σ≡Prop (λ _ → decreasingIsProp)
+
+□↓-d0 : ∀ {n} → □↓ (suc n) → □↓ n
+□↓-d0 (x , _) .fst = drop x
+□↓-d0 {0} _ .snd = tt*
+□↓-d0 {1} _ .snd = tt*
+□↓-d0 {suc (suc _)} ((x , y , xs) , x≽y , P) .snd = x≽y , □↓-d0 ((y , xs) , P) .snd
+
+□↓-d1 : ∀ {n} → □↓ (suc n) → □↓ n
+□↓-d1 {0} _ = tt* , tt*
+□↓-d1 {suc _} ((_ , x) , _) .fst = x
+□↓-d1 {1} _ .snd = tt*
+□↓-d1 {suc (suc _)} (_ , _ , P) .snd = P
+
+□↓-s0 : ∀ {n} → □↓ n → □↓ (suc n)
+□↓-s0 (x , _) .fst = append x s0
+□↓-s0 {0} _ .snd = tt*
+□↓-s0 {1} _ .snd .fst = s0-min
+□↓-s0 {suc (suc _)} (_ , s≽t , _) .snd .fst = s≽t
+□↓-s0 {1} _ .snd .snd = tt*
+□↓-s0 {suc (suc _)} ((_ , x) , _ , P) .snd .snd = □↓-s0 (x , P) .snd
+
+□↓-s1 : ∀ {n} → □↓ n → □↓ (suc n)
+□↓-s1 (x , _) .fst = s1 , x
+□↓-s1 {0} _ .snd = tt*
+□↓-s1 {suc _} _ .snd .fst = s1-max
+□↓-s1 {1} _ .snd .snd = tt*
+□↓-s1 {suc (suc _)} (_ , P) .snd .snd = P
 
 δ↓ : ∀ {n} → S → □↓ n
 δ↓ s .fst = δ s

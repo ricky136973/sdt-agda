@@ -238,6 +238,43 @@ SMonotoneN↓ f x≼y =
   let f̃ , P = extend↓ f in
   ≼-trans (≼-reflP (sym P)) (≼-trans (SMonotoneN f̃ x≼y) (≼-reflP P))
 
+--------------------------------------------------------------
+
+module _ where
+  open FiniteList
+
+  vertices : ∀ n → FiniteList (□↓ n) (suc n)
+  vertices zero = (tt* , tt*) , tt*
+  vertices (suc _) = δ↓ s1 , map □↓-s0 (vertices _)
+
+  vertices-decreasing : ∀ {n} → IsMonotonic (λ x y → fst x □≽□ fst y) (vertices n)
+  vertices-decreasing {zero} = tt*
+  vertices-decreasing {suc n} .fst = δ1-max
+    where
+      δ1-max : ∀ {n} {x : □ n} → x □≼□ δ s1
+      δ1-max {zero} = tt*
+      δ1-max {suc _} = s1-max , δ1-max
+  vertices-decreasing {suc _} .snd =
+    map-monotone □↓-s0 (λ x y P → □↓-s0-monotone {_} {y} {x} P) vertices-decreasing
+    where
+      □↓-s0-monotone : ∀ {n} {x y : □↓ n} → fst x □≼□ fst y → □↓-s0 x .fst □≼□ □↓-s0 y .fst
+      □↓-s0-monotone {0} _ = ≼-refl , tt*
+      □↓-s0-monotone {suc _} (x≼y , _) .fst = x≼y
+      □↓-s0-monotone {1} _ .snd = ≼-refl , tt*
+      □↓-s0-monotone {suc (suc _)} {_ , _ , xsP} {_ , _ , ysP} (_ , xs□≼□ys) .snd =
+        □↓-s0-monotone {_} {_ , xsP} {_ , ysP} xs□≼□ys
+
+  boundary : ∀ {n} → (□↓ n → S) → □ (suc n)
+  boundary f = map f (vertices _)
+
+  boundary-decreasing : ∀ {n} {f : □↓ n → S} → decreasing (boundary f)
+  boundary-decreasing {f = f} = map-monotone _ (λ x y → SMonotoneN↓ f) vertices-decreasing
+
+boundary↓ : ∀ {n} → (□↓ n → S) → □↓ (suc n)
+boundary↓ f = boundary f , boundary-decreasing
+
+---------------------------------------------------------------
+
 zip : ∀ {n} → □ n → □ n → S
 zip {zero} _ _ = s0
 zip {suc _} (s , x) (t , y) = s ⊓ t ⊔ zip x y
