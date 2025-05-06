@@ -245,33 +245,26 @@ module _ where
 
   vertices : ∀ n → FiniteList (□↓ n) (suc n)
   vertices zero = (tt* , tt*) , tt*
-  vertices (suc _) = δ↓ s1 , map □↓-s0 (vertices _)
+  vertices (suc _) = δ↓ s0 , map □↓-s1 (vertices _)
 
-  vertices-decreasing : ∀ {n} → IsMonotonic (λ x y → fst x □≽□ fst y) (vertices n)
-  vertices-decreasing {zero} = tt*
-  vertices-decreasing {suc n} .fst = δ1-max
+  vertices-increasing : ∀ {n} → IsMonotonic (λ x y → fst x □≼□ fst y) (vertices n)
+  vertices-increasing {zero} = tt*
+  vertices-increasing {suc n} .fst = δ0-min
     where
-      δ1-max : ∀ {n} {x : □ n} → x □≼□ δ s1
-      δ1-max {zero} = tt*
-      δ1-max {suc _} = s1-max , δ1-max
-  vertices-decreasing {suc _} .snd =
-    map-monotone □↓-s0 (λ x y P → □↓-s0-monotone {_} {y} {x} P) vertices-decreasing
-    where
-      □↓-s0-monotone : ∀ {n} {x y : □↓ n} → fst x □≼□ fst y → □↓-s0 x .fst □≼□ □↓-s0 y .fst
-      □↓-s0-monotone {0} _ = ≼-refl , tt*
-      □↓-s0-monotone {suc _} (x≼y , _) .fst = x≼y
-      □↓-s0-monotone {1} _ .snd = ≼-refl , tt*
-      □↓-s0-monotone {suc (suc _)} {_ , _ , xsP} {_ , _ , ysP} (_ , xs□≼□ys) .snd =
-        □↓-s0-monotone {_} {_ , xsP} {_ , ysP} xs□≼□ys
+      δ0-min : ∀ {n} {x : □ n} → δ s0 □≼□ x
+      δ0-min {zero} = tt*
+      δ0-min {suc _} = s0-min , δ0-min
+  vertices-increasing {suc n} .snd =
+    map-monotone □↓-s1 (λ _ _ P → ≼-refl , P) vertices-increasing
 
   boundary : ∀ {n} → (□↓ n → S) → □ (suc n)
   boundary f = map f (vertices _)
 
-  boundary-decreasing : ∀ {n} {f : □↓ n → S} → decreasing (boundary f)
-  boundary-decreasing {f = f} = map-monotone _ (λ x y → SMonotoneN↓ f) vertices-decreasing
+  boundary-increasing : ∀ {n} {f : □↓ n → S} → increasing (boundary f)
+  boundary-increasing {f = f} = map-monotone _ (λ x y → SMonotoneN↓ f) vertices-increasing
 
-boundary↓ : ∀ {n} → (□↓ n → S) → □↓ (suc n)
-boundary↓ f = boundary f , boundary-decreasing
+boundary↓ : ∀ {n} → (□↓ n → S) → □↑ (suc n)
+boundary↓ f = boundary f , boundary-increasing
 
 ---------------------------------------------------------------
 
@@ -286,3 +279,9 @@ zip-monotoneL {suc _} (P , Q) = ⊔-monotone (⊓-monotoneL P) (zip-monotoneL Q)
 zip-monotoneR : ∀ {n} {x y z : □ n} → y □≼□ z → zip x y ≼ zip x z
 zip-monotoneR {zero} _ = ≼-refl
 zip-monotoneR {suc _} (P , Q) = ⊔-monotone (⊓-monotoneR P) (zip-monotoneR Q)
+
+interpolateN : ∀ {n} → □ (suc n) → □ n → S
+interpolateN (x , xs) y = x ⊔ zip xs y
+
+interpolate↑ : ∀ {n} → □↑ (suc n) → □↓ n → S
+interpolate↑ (x , _) (y , _) = interpolateN x y

@@ -89,7 +89,8 @@ data ω : Type ℓ₀ where
 ω-suc n = σ (η n)
 
 ℕ→ω : ℕ → ω
-ℕ→ω n = iter n ω-suc ω-zero
+ℕ→ω zero = ω-zero
+ℕ→ω (suc n) = ω-suc (ℕ→ω n)
 
 ℕ→ω≡step : ℕ→ω ≡ step σ
 ℕ→ω≡step i zero = ω-zero
