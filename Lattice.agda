@@ -29,6 +29,9 @@ postulate _⊔_ : S → S → S
 postulate ⊔-def : ∀ {x y} → ⟦ x ⊔ y ⟧ ≡ ⟦ x ⟧ ⊎ ⟦ y ⟧
 
 opaque
+  ⊔-intro : ∀ {x y z} → x ≼ z → y ≼ z → x ⊔ y ≼ z
+  ⊔-intro x≼z y≼z φ = rec⊎ x≼z y≼z (λ _ _ → defIsProp _ _) (transport ⊔-def φ)
+
   x≼x⊔y : ∀ {x y} → x ≼ x ⊔ y
   x≼x⊔y φ = transport (sym ⊔-def) (inl φ)
 
@@ -82,6 +85,15 @@ opaque
   
   ⊔-monotone : ∀ {w x y z} → w ≼ y → x ≼ z → w ⊔ x ≼ y ⊔ z
   ⊔-monotone w≼y x≼z φ = ⊔-monotoneL w≼y (⊔-monotoneR x≼z φ)
+
+  ⊔-congL : ∀ {x y z} → x ≡ y → x ⊔ z ≡ y ⊔ z
+  ⊔-congL p = ≼-antisym (⊔-monotoneL (≼-reflP p)) (⊔-monotoneL (≼-reflP (sym p)))
+
+  ⊔-congR : ∀ {x y z} → y ≡ z → x ⊔ y ≡ x ⊔ z
+  ⊔-congR p = ≼-antisym (⊔-monotoneR (≼-reflP p)) (⊔-monotoneR (≼-reflP (sym p)))
+
+  ⊔-cong : ∀ {w x y z} → w ≡ x → y ≡ z → w ⊔ y ≡ x ⊔ z
+  ⊔-cong p q = ⊔-congL p ∙ ⊔-congR q
 
 interpolate : S → S → S → S
 interpolate s t x = s ⊔ x ⊓ t
@@ -141,13 +153,14 @@ opaque
   □≼□-antisym {zero} _ _ = refl
   □≼□-antisym {suc _} (P , Q) (R , S) = ≡-× (≼-antisym P R) (□≼□-antisym Q S)
 
-□-map : ∀ {n} → (S → S) → □ n → □ n
-□-map {zero} f _ = tt*
-□-map {suc _} f (s , x) = f s , □-map f x
+module _ where
+  open FiniteList
 
-□-map-comp : ∀ {n f g} {x : □ n} → □-map f (□-map g x) ≡ □-map (λ x → f (g x)) x
-□-map-comp {zero} = refl
-□-map-comp {suc _} = ≡-× refl □-map-comp
+  □-map : ∀ {n} → (S → S) → □ n → □ n
+  □-map f = map f
+
+  □-map-comp : ∀ {n f g} {x : □ n} → □-map f (□-map g x) ≡ □-map (λ x → f (g x)) x
+  □-map-comp = map-comp
 
 □↑-map : ∀ {n} → (S → S) → □↑ n → □↑ n
 □↑-map f (x , _) .fst = □-map f x
@@ -238,7 +251,7 @@ SMonotoneN↓ f x≼y =
   let f̃ , P = extend↓ f in
   ≼-trans (≼-reflP (sym P)) (≼-trans (SMonotoneN f̃ x≼y) (≼-reflP P))
 
---------------------------------------------------------------
+-------------------------------------------------------------
 
 module _ where
   open FiniteList
@@ -266,11 +279,15 @@ module _ where
 boundary↓ : ∀ {n} → (□↓ n → S) → □↑ (suc n)
 boundary↓ f = boundary f , boundary-increasing
 
----------------------------------------------------------------
+-------------------------------------------------------------
 
 zip : ∀ {n} → □ n → □ n → S
 zip {zero} _ _ = s0
 zip {suc _} (s , x) (t , y) = s ⊓ t ⊔ zip x y
+
+zip-δ0 : ∀ {n} {x : □ n} → zip x (δ s0) ≡ s0
+zip-δ0 {zero} = refl
+zip-δ0 {suc _} = x⊔y=y (≼-trans x⊓y≼y s0-min) ∙ zip-δ0
 
 zip-monotoneL : ∀ {n} {x y z : □ n} → x □≼□ y → zip x z ≼ zip y z
 zip-monotoneL {zero} _ = ≼-refl
@@ -281,7 +298,61 @@ zip-monotoneR {zero} _ = ≼-refl
 zip-monotoneR {suc _} (P , Q) = ⊔-monotone (⊓-monotoneR P) (zip-monotoneR Q)
 
 interpolateN : ∀ {n} → □ (suc n) → □ n → S
-interpolateN (x , xs) y = x ⊔ zip xs y
+interpolateN (s , x) y = s ⊔ zip x y
 
 interpolate↑ : ∀ {n} → □↑ (suc n) → □↓ n → S
 interpolate↑ (x , _) (y , _) = interpolateN x y
+
+-------------------------------------------------------------
+
+module _ where
+  open FiniteList
+
+  boundary-inv : ∀ {n} (x : □↑ (suc n)) → boundary (interpolate↑ x) ≡ fst x
+  boundary-inv {zero} _ = ≡-× x⊔0=x refl
+  boundary-inv {suc n} ((s , t , x) , s≼t , P) = ≡-×
+    (x⊔y=x (≼-trans (≼-reflP zip-δ0) s0-min))
+    (
+      ≡-×
+        (⊔-assoc ∙ ⊔-congL (cong (_⊔_ s) x⊓1=x ∙ x⊔y=y s≼t))
+        (map-comp ∙ cong
+          (λ f → map f (vertices n .snd))
+          (funExt λ x → ⊔-assoc ∙ ⊔-congL ((cong (_⊔_ s) x⊓1=x) ∙ x⊔y=y s≼t))) ∙
+      boundary-inv ((t , x) , P)
+    )
+
+  interpolate↑-funExt : ∀ {n} (f : □↓ n → S) (x : □↓ n) → interpolate↑ (boundary↓ f) x ≡ f x
+  interpolate↑-funExt {0} _ _ = x⊔0=x ∙ refl
+  interpolate↑-funExt {1} f ((s , _) , _) =
+    ⊔-congR (x⊔0=x ∙ ⊓-comm) ∙
+    λ i → SLinear {λ s → f ((s , tt*) , tt*)} (~ i) s
+  interpolate↑-funExt {suc (suc n)} f ((s , t , x) , s≽t , P) =
+    ⊔-assoc ∙
+    ⊔-cong
+      (
+        ⊔-cong
+          (cong f (□↓≡ (≡-× (sym x⊔0=x) refl)))
+          (⊓-comm ∙ ⊓-congR (cong f (□↓≡ (≡-× (sym x⊔0=x) refl)))) ∙
+        λ i → SLinear {λ s → f ((s ⊔ s0 , s0 , δ s0) , y≼x⊔y , δ↓ s0 .snd)} (~ i) s
+      )
+      (⊔-cong
+        (⊓-congL (cong f (□↓≡ (≡-× (sym x⊔1=1) refl))))
+        (cong (λ y → zip y x) (
+          map-comp ∙ map-comp ∙
+          cong (λ f → map f (vertices n .snd)) (funExt λ _ → cong f (□↓≡ (≡-× (sym x⊔1=1) refl))) ∙
+          sym map-comp))
+      ) ∙
+    interpolate↑-funExt {suc n} (λ ((t , x) , P) → f ((s ⊔ t , t , x) , y≼x⊔y , P)) ((t , x) , P) ∙
+    cong f (□↓≡ (≡-× (x⊔y=x s≽t) refl))
+
+boundary↓-inv : ∀ {n} (x : □↑ (suc n)) → boundary↓ (interpolate↑ x) ≡ x
+boundary↓-inv x = □↑≡ (boundary-inv x)
+
+interpolate↑-inv : ∀ {n} (f : □↓ n → S) → interpolate↑ (boundary↓ f) ≡ f
+interpolate↑-inv f = funExt (interpolate↑-funExt f)
+
+PhoaN : ∀ {n} → Iso (□↓ n → S) (□↑ (suc n))
+PhoaN .Iso.fun = boundary↓
+PhoaN .Iso.inv = interpolate↑
+PhoaN .Iso.rightInv = boundary↓-inv
+PhoaN .Iso.leftInv = interpolate↑-inv

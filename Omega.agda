@@ -36,20 +36,73 @@ open import Cubical.HITs.SequentialColimit
 □↓ω→ω (push {1} ((s , _) , _) i) = σ (s , λ _ → □↓ω→ω (push (tt* , tt*) i))
 □↓ω→ω (push {suc (suc n)} ((s , t , x) , s≽t , P) i) = σ (s , λ _ → □↓ω→ω (push ((t , x) , P) i))
 
-record □∞ : Type ℓ₀ where
-  inductive
-  no-eta-equality
-  pattern
-  constructor _,_
-  field
-    fst : S
-    snd : □∞
+-------------------------------------------------------------
 
-module _ where
-  open □∞
+□∞ : Type ℓ₀
+□∞ = ℕ → S
 
-  increasing∞ : □∞ → Type ℓ₀
-  increasing∞ (s , t , x) = (s ≼ t) × increasing∞ (t , x)
+increasing∞ : □∞ → Type ℓ₀
+increasing∞ x = ∀ n → (x n ≼ x (suc n))
 
-  decreasing∞ : □∞ → Type ℓ₀
-  decreasing∞ (s , t , x) = (s ≽ t) × decreasing∞ (t , x)
+increasing∞IsProp : ∀ x → isProp (increasing∞ x)
+increasing∞IsProp _ _ _ = funExt λ _ → ≼-isProp _ _
+
+□↑∞ : Type ℓ₀
+□↑∞ = Σ[ x ∈ □∞ ] increasing∞ x
+
+□↑∞≡ : ∀ {x y : □↑∞} → (∀ n → x .fst n ≡ y .fst n) → x ≡ y
+□↑∞≡ p = Σ≡Prop increasing∞IsProp (funExt p)
+
+decreasing∞ : □∞ → Type ℓ₀
+decreasing∞ x = ∀ n → (x n ≽ x (suc n))
+
+decreasing∞IsProp : ∀ x → isProp (decreasing∞ x)
+decreasing∞IsProp _ _ _ = funExt λ _ → ≼-isProp _ _
+
+□↓∞ : Type ℓ₀
+□↓∞ = Σ[ x ∈ □∞ ] decreasing∞ x
+
+□↓∞≡ : ∀ {x y : □↓∞} → (∀ n → x .fst n ≡ y .fst n) → x ≡ y
+□↓∞≡ p = Σ≡Prop decreasing∞IsProp (funExt p)
+
+□↑→□∞ : ∀ {n} → □↑ n → □∞
+□↑→□∞ {0} _ _ = s1
+□↑→□∞ {suc _} ((s , _) , _) 0 = s
+□↑→□∞ {1} _ (suc _) = s1
+□↑→□∞ {suc (suc _)} ((_ , x) , _ , P) (suc k) = □↑→□∞ (x , P) k
+
+□↑→□∞-increasing : ∀ {n} → (x : □↑ n) → increasing∞ (□↑→□∞ x)
+□↑→□∞-increasing {0} _ _ = s1-max
+□↑→□∞-increasing {1} _ _ = s1-max
+□↑→□∞-increasing {suc (suc _)} (_ , s≼t , _) 0 = s≼t
+□↑→□∞-increasing {suc (suc _)} ((_ , x) , _ , P) (suc k) = □↑→□∞-increasing (x , P) k
+
+□↑→∞ : ∀ {n} → □↑ n → □↑∞
+□↑→∞ x = □↑→□∞ x , □↑→□∞-increasing x
+
+□↓→□∞ : ∀ {n} → □↓ n → □∞
+□↓→□∞ {0} _ _ = s0
+□↓→□∞ {suc _} ((s , _) , _) 0 = s
+□↓→□∞ {1} _ (suc _) = s0
+□↓→□∞ {suc (suc _)} ((_ , x) , _ , P) (suc k) = □↓→□∞ (x , P) k
+
+□↓ω→□∞-decreasing : ∀ {n} → (x : □↓ n) → decreasing∞ (□↓→□∞ x)
+□↓ω→□∞-decreasing {0} _ _ = s0-min
+□↓ω→□∞-decreasing {1} _ _ = s0-min
+□↓ω→□∞-decreasing {suc (suc _)} (_ , s≽t , _) 0 = s≽t
+□↓ω→□∞-decreasing {suc (suc _)} ((_ , x) , _ , P) (suc k) = □↓ω→□∞-decreasing (x , P) k
+
+□↓→∞ : ∀ {n} → □↓ n → □↓∞
+□↓→∞ x = □↓→□∞ x , □↓ω→□∞-decreasing x
+
+infix 20 _∞≼∞_
+infix 20 _∞≽∞_
+
+_∞≼∞_ : □∞ → □∞ → Type ℓ₀
+x ∞≼∞ y = ∀ n → x n ≼ y n
+
+_∞≽∞_ : □∞ → □∞ → Type ℓ₀
+x ∞≽∞ y = y ∞≼∞ x
+
+boundaryω : (□↓ω → S) → □∞
+boundaryω f n = f (incl (δ↓ {n} s1))

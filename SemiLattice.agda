@@ -80,6 +80,9 @@ _⊓_ : S → S → S
 x ⊓ y = SΣ (x , λ _ → y)
 
 opaque
+  ⊓-intro : ∀ {x y z} → x ≼ y → x ≼ z → x ≼ y ⊓ z
+  ⊓-intro x≼y y≼z φ = transport (sym SΣ-def) (x≼y φ , y≼z φ)
+
   x⊓y≼x : ∀ {x y} → x ⊓ y ≼ x
   x⊓y≼x = SΣ-≼L
 
@@ -128,10 +131,20 @@ opaque
   ⊓-monotone : ∀ {w x y z} → w ≼ y → x ≼ z → w ⊓ x ≼ y ⊓ z
   ⊓-monotone w≼y x≼z φ = ⊓-monotoneL w≼y (⊓-monotoneR x≼z φ)
 
+  ⊓-congL : ∀ {x y z} → x ≡ y → x ⊓ z ≡ y ⊓ z
+  ⊓-congL p = ≼-antisym (⊓-monotoneL (≼-reflP p)) (⊓-monotoneL (≼-reflP (sym p)))
+
+  ⊓-congR : ∀ {x y z} → y ≡ z → x ⊓ y ≡ x ⊓ z
+  ⊓-congR p = ≼-antisym (⊓-monotoneR (≼-reflP p)) (⊓-monotoneR (≼-reflP (sym p)))
+
+  ⊓-cong : ∀ {w x y z} → w ≡ y → x ≡ z → w ⊓ x ≡ y ⊓ z
+  ⊓-cong p q = ⊓-congL p ∙ ⊓-congR q
+
 module FiniteList where
   variable ℓ ℓ' ℓ'' ℓ''' : Level
   variable A : Type ℓ
   variable B : Type ℓ'
+  variable C : Type ℓ''
   variable R : A → A → Type ℓ'
 
   FiniteList : (A : Type ℓ) → ℕ → Type ℓ
@@ -153,6 +166,11 @@ module FiniteList where
   map : (A → B) → ∀ {n} → FiniteList A n → FiniteList B n
   map f {zero} _ = tt*
   map f {suc _} (x , xs) = f x , map f xs
+
+  map-comp : ∀ {n} {f : A → B} {g : B → C} {xs : FiniteList A n} →
+    map g (map f xs) ≡ map (λ x → g (f x)) xs
+  map-comp {n = zero} = refl
+  map-comp {n = suc _} = ≡-× refl map-comp
 
   ListR : (R : A → A → Type ℓ') → ∀ {n} → A → FiniteList A n → Type ℓ'
   ListR R {zero} _ _ = Unit*
@@ -299,8 +317,8 @@ increasing : ∀ {n} → □ n → Type ℓ₀
 increasing = IsMonotonic _≼_
 
 opaque
-  increasingIsProp : ∀ {n} {x : □ n} → isProp (increasing x)
-  increasingIsProp = IsMonotonicIsProp λ _ _ → ≼-isProp
+  increasingIsProp : ∀ {n} (x : □ n) → isProp (increasing x)
+  increasingIsProp _ = IsMonotonicIsProp λ _ _ → ≼-isProp
 
   increasing-≼ : ∀ {n s t} {x : □ n} → s ≼ t → increasing (t , x) → increasing (s , x)
   increasing-≼ = IsMonotonic-trans λ _ _ _ → ≼-trans
@@ -312,8 +330,8 @@ decreasing : ∀ {n} → □ n → Type ℓ₀
 decreasing = IsMonotonic _≽_
 
 opaque
-  decreasingIsProp : ∀ {n} {x : □ n} → isProp (decreasing x)
-  decreasingIsProp = IsMonotonicIsProp λ _ _ → ≼-isProp
+  decreasingIsProp : ∀ {n} (x : □ n) → isProp (decreasing x)
+  decreasingIsProp _ = IsMonotonicIsProp λ _ _ → ≼-isProp
 
   decreasing-≽ : ∀ {n s t} {x : □ n} → s ≽ t → decreasing (t , x) → decreasing (s , x)
   decreasing-≽ = IsMonotonic-trans λ _ _ _ P Q → ≼-trans Q P
@@ -325,13 +343,13 @@ opaque
 □↑ n = Σ[ x ∈ □ n ] increasing x
 
 □↑≡ : ∀ {n} {x y : □↑ n} → fst x ≡ fst y → x ≡ y
-□↑≡ = Σ≡Prop (λ _ → increasingIsProp)
+□↑≡ = Σ≡Prop increasingIsProp
 
 □↓ : ℕ → Type ℓ₀
 □↓ n = Σ[ x ∈ □ n ] decreasing x
 
 □↓≡ : ∀ {n} {x y : □↓ n} → fst x ≡ fst y → x ≡ y
-□↓≡ = Σ≡Prop (λ _ → decreasingIsProp)
+□↓≡ = Σ≡Prop decreasingIsProp
 
 □↑-d0 : ∀ {n} → □↑ (suc n) → □↑ n
 □↑-d0 ((_ , x) , P) = x , tail-monotone P
@@ -420,3 +438,4 @@ L□↓≡□↓ = isoToPath L□↓≅□↓
 Δ≡□↓ : ∀ {n} → Δ n ≡ □↓ n
 Δ≡□↓ {zero} = isoToPath (iso (λ _ → tt* , tt*) (λ _ → tt*) (λ _ → refl) (λ _ → refl))
 Δ≡□↓ {suc _} = cong L Δ≡□↓ ∙ L□↓≡□↓
+ 
