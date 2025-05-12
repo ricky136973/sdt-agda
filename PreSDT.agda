@@ -192,15 +192,3 @@ postulate SisComplete : isComplete S
 
 εχ⊥ : Type ℓ → Type (ℓ-max ℓ ℓ₀)
 εχ⊥ = isOrthoComplete εχ
-
--- εχ⊥isWellComplete : εχ⊥ A → isWellComplete A
--- εχ⊥isWellComplete P .equiv-proof c .fst .fst u .fst =
---   SisComplete .equiv-proof (λ n → c n .fst) .fst .fst u
--- εχ⊥isWellComplete P .equiv-proof c .fst .fst u .snd φ = P
---   (SisComplete .equiv-proof (λ n → c n .fst) .fst .fst)
---   (λ (n , ψ) → c n .snd ((λ i → SisComplete .equiv-proof (λ n → c n .fst) .fst .snd (~ i) n) ∙ ψ))
---   .fst .fst (u , φ)
--- εχ⊥isWellComplete P .equiv-proof c .fst .snd i n .fst =
---   SisComplete .equiv-proof (λ n → c n .fst) .fst .snd i n
--- εχ⊥isWellComplete P .equiv-proof c .fst .snd i n .snd φ = {!   !}
--- εχ⊥isWellComplete P .equiv-proof c .snd = {!   !}

@@ -438,4 +438,3 @@ L□↓≡□↓ = isoToPath L□↓≅□↓
 Δ≡□↓ : ∀ {n} → Δ n ≡ □↓ n
 Δ≡□↓ {zero} = isoToPath (iso (λ _ → tt* , tt*) (λ _ → tt*) (λ _ → refl) (λ _ → refl))
 Δ≡□↓ {suc _} = cong L Δ≡□↓ ∙ L□↓≡□↓
- 

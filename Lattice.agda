@@ -352,7 +352,4 @@ interpolate↑-inv : ∀ {n} (f : □↓ n → S) → interpolate↑ (boundary�
 interpolate↑-inv f = funExt (interpolate↑-funExt f)
 
 PhoaN : ∀ {n} → Iso (□↓ n → S) (□↑ (suc n))
-PhoaN .Iso.fun = boundary↓
-PhoaN .Iso.inv = interpolate↑
-PhoaN .Iso.rightInv = boundary↓-inv
-PhoaN .Iso.leftInv = interpolate↑-inv
+PhoaN = iso boundary↓ interpolate↑ boundary↓-inv interpolate↑-inv

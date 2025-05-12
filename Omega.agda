@@ -14,7 +14,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Nat
 open import Cubical.Data.Sequence
 
-open import Cubical.HITs.SequentialColimit
+open import Cubical.HITs.SequentialColimit renaming (elim to elim←)
 
 □↑-seq : Sequence ℓ₀
 □↑-seq = sequence □↑ □↑-s1
@@ -34,12 +34,22 @@ open import Cubical.HITs.SequentialColimit
 □↓ω→ω (incl {suc (suc _)} ((s , t , x) , s≽t , P)) = σ (s , λ _ → □↓ω→ω (incl ((t , x) , P)))
 □↓ω→ω (push {0} _ i) = σ (s0 , λ φ → rec⊥ {A = rec⊥ (s0≠s1 φ) ≡ ω-zero} (s0≠s1 φ) i)
 □↓ω→ω (push {1} ((s , _) , _) i) = σ (s , λ _ → □↓ω→ω (push (tt* , tt*) i))
-□↓ω→ω (push {suc (suc n)} ((s , t , x) , s≽t , P) i) = σ (s , λ _ → □↓ω→ω (push ((t , x) , P) i))
+□↓ω→ω (push {suc (suc _)} ((s , t , x) , s≽t , P) i) = σ (s , λ _ → □↓ω→ω (push ((t , x) , P) i))
+
+SMonotoneω : ∀ {n} {x y : □↓ n} (f : □↓ω → S) → fst x □≼□ fst y → f (incl x) ≼ f (incl y)
+SMonotoneω f = SMonotoneN↓ λ x → f (incl x)
 
 -------------------------------------------------------------
 
 □∞ : Type ℓ₀
 □∞ = ℕ → S
+
+□∞-tail : □∞ → □∞
+□∞-tail x n = x (suc n)
+
+□∞-proj : ∀ n → □∞ → □ n
+□∞-proj zero x = tt*
+□∞-proj (suc n) x = x 0 , □∞-proj n (□∞-tail x)
 
 increasing∞ : □∞ → Type ℓ₀
 increasing∞ x = ∀ n → (x n ≼ x (suc n))
@@ -53,6 +63,9 @@ increasing∞IsProp _ _ _ = funExt λ _ → ≼-isProp _ _
 □↑∞≡ : ∀ {x y : □↑∞} → (∀ n → x .fst n ≡ y .fst n) → x ≡ y
 □↑∞≡ p = Σ≡Prop increasing∞IsProp (funExt p)
 
+□↑∞-d0 : □↑∞ → □↑∞
+□↑∞-d0 (x , P) = □∞-tail x , λ n → P (suc n)
+
 decreasing∞ : □∞ → Type ℓ₀
 decreasing∞ x = ∀ n → (x n ≽ x (suc n))
 
@@ -64,6 +77,9 @@ decreasing∞IsProp _ _ _ = funExt λ _ → ≼-isProp _ _
 
 □↓∞≡ : ∀ {x y : □↓∞} → (∀ n → x .fst n ≡ y .fst n) → x ≡ y
 □↓∞≡ p = Σ≡Prop decreasing∞IsProp (funExt p)
+
+□↓∞-d1 : □↓∞ → □↓∞
+□↓∞-d1 (x , P) = □∞-tail x , λ n → P (suc n)
 
 □↑→□∞ : ∀ {n} → □↑ n → □∞
 □↑→□∞ {0} _ _ = s1
@@ -104,5 +120,103 @@ x ∞≼∞ y = ∀ n → x n ≼ y n
 _∞≽∞_ : □∞ → □∞ → Type ℓ₀
 x ∞≽∞ y = y ∞≼∞ x
 
-boundaryω : (□↓ω → S) → □∞
-boundaryω f n = f (incl (δ↓ {n} s1))
+module _ where
+  open FiniteList
+
+  boundaryω : (□↓ω → S) → □∞
+  boundaryω f n = f (incl (δ↓ {n} s1))
+
+  boundaryω≡boundary : ∀ {n} f → □∞-proj (suc n) (boundaryω f) ≡ boundary λ x → f (incl x)
+  boundaryω≡boundary {zero} f = refl
+  boundaryω≡boundary {suc n} f =
+    ≡-× (cong f δ↓-s0-reduce) (
+      ≡-× refl (cong (□∞-proj n) (funExt λ n → cong f (cong incl (□↓≡ refl)))) ∙
+      (boundaryω≡boundary λ x → f (□↓ω-s1 x)) ∙
+      sym map-comp
+    )
+    where
+      □↓ω-zero : □↓ω
+      □↓ω-zero = incl (tt* , tt*)
+
+      δ↓-s0-reduce : ∀ {n} → □↓ω-zero ≡ incl (δ↓ {n} s0)
+      δ↓-s0-reduce {zero} = refl
+      δ↓-s0-reduce {suc n} = δ↓-s0-reduce ∙ (push (δ↓ s0)) ∙ cong incl (□↓≡ δ-append)
+        where
+          δ-append : ∀ {n} → append (δ {n} s0) s0 ≡ δ s0
+          δ-append {zero} = refl
+          δ-append {suc n} = ≡-× refl δ-append
+
+      □↓ω-s1 : □↓ω → □↓ω
+      □↓ω-s1 (incl x) = incl (□↓-s1 x)
+      □↓ω-s1 (push x i) = (push (□↓-s1 x) ∙ cong incl □↓-s0-s1-comm) i
+        where
+          □↓-s0-s1-comm : ∀ {n} {x : □↓ n} → □↓-s0 (□↓-s1 x) ≡ □↓-s1 (□↓-s0 x)
+          □↓-s0-s1-comm = □↓≡ refl
+
+  boundaryω-increasing : ∀ {f} → increasing∞ (boundaryω f)
+  boundaryω-increasing {f} n = ≼-trans (≼-reflP λ i → f (push (δ↓ {n} s1) i)) (SMonotoneω f δ1-□↓-s0)
+    where
+      δ1-□↓-s0 : ∀ {n} → □↓-s0 {n} (δ↓ s1) .fst □≼□ (δ↓ s1) .fst
+      δ1-□↓-s0 {zero} = s1-max , tt*
+      δ1-□↓-s0 {suc _} = s1-max , δ1-□↓-s0
+
+boundary↓ω : (□↓ω → S) → □↑∞
+boundary↓ω f = boundaryω f , boundaryω-increasing {f}
+
+-------------------------------------------------------------
+
+zipω : □∞ → ∀ {n} → □ n → S
+zipω x {zero} y = s0
+zipω x {suc n} (t , y) = x zero ⊓ t ⊔ zipω (□∞-tail x) y
+
+zipω≡zip : ∀ {n x} {y : □ n} → zipω x y ≡ zip (□∞-proj _ x) y
+zipω≡zip {zero} = refl
+zipω≡zip {suc n} = ⊔-congR zipω≡zip
+
+interpolateω : □∞ → ∀ {n} → □ n → S
+interpolateω x y = x zero ⊔ zipω (□∞-tail x) y
+
+interpolateω≡interpolateN : ∀ {n x} {y : □ n} → interpolateω x y ≡ interpolateN (□∞-proj _ x) y
+interpolateω≡interpolateN = ⊔-congR zipω≡zip
+
+module _ where
+  open FiniteList
+
+  zipω-push : ∀ {n x} {y : □ n} → zipω x y ≡ zipω x (append y s0)
+  zipω-push {zero} = sym (x⊔y=y x⊓y≼y)
+  zipω-push {suc _} = ⊔-congR zipω-push
+
+  interpolateω-push : ∀ x {n} (y : □ n) → interpolateω x y ≡ interpolateω x (append y s0)
+  interpolateω-push _ _ = ⊔-congR zipω-push
+
+interpolate↑ω : □↑∞ → □↓ω → S
+interpolate↑ω (x , _) (incl (y , _)) = interpolateω x y
+interpolate↑ω (x , _) (push (y , _) i) = interpolateω-push x y i
+
+-------------------------------------------------------------
+
+boundaryω-inv : ∀ x n → boundaryω (interpolate↑ω x) n ≡ fst x n
+boundaryω-inv x zero = x⊔y=x s0-min
+boundaryω-inv (x , P) (suc n) =
+  ⊔-assoc ∙
+  ⊔-congL (⊔-congR x⊓1=x ∙ x⊔y=y (P 0)) ∙
+  boundaryω-inv (□↑∞-d0 (x , P)) n
+
+boundary↓ω-inv : ∀ x → boundary↓ω (interpolate↑ω x) ≡ x
+boundary↓ω-inv x = □↑∞≡ (boundaryω-inv x)
+
+interpolate↑ω-funExt : ∀ f x → interpolate↑ω (boundary↓ω f) x ≡ f x
+interpolate↑ω-funExt f = elim← _ _ elimdata-funExt
+  where
+    elimdata-funExt : ElimData _ _
+    elimdata-funExt .ElimData.inclP _ =
+      interpolateω≡interpolateN {x = boundaryω f} ∙
+      cong₂ interpolateN (boundaryω≡boundary f) refl ∙
+      interpolate↑-funExt (λ x → f (incl x)) _
+    elimdata-funExt .ElimData.pushP _ = isProp→PathP (λ _ → SisSet _ _) _ _
+
+interpolate↑ω-inv : ∀ f → interpolate↑ω (boundary↓ω f) ≡ f
+interpolate↑ω-inv f = funExt (interpolate↑ω-funExt f)
+
+Phoaω : Iso (□↓ω → S) □↑∞
+Phoaω = iso boundary↓ω interpolate↑ω boundary↓ω-inv interpolate↑ω-inv
