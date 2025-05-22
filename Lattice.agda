@@ -7,6 +7,7 @@ open import SemiLattice public
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Pointed
 
 open import Cubical.Data.Sigma
 open import Cubical.Data.Unit
@@ -97,6 +98,13 @@ opaque
 
 interpolate : S → S → S → S
 interpolate s t x = s ⊔ x ⊓ t
+
+opaque
+  interpolate-0 : ∀ {s t} → interpolate s t s0 ≡ s
+  interpolate-0 = x⊔y=x (≼-trans x⊓y≼x s0-min)
+
+  interpolate-1 : ∀ {s t} → s ≼ t → interpolate s t s1 ≡ t
+  interpolate-1 s≼t = x⊔y=y (⊓-intro s1-max s≼t) ∙ 1⊓x=x
 
 postulate SLinear : {f : S → S} → f ≡ interpolate (f s0) (f s1)
 
@@ -276,8 +284,8 @@ module _ where
   boundary-increasing : ∀ {n} {f : □↓ n → S} → increasing (boundary f)
   boundary-increasing {f = f} = map-monotone _ (λ x y → SMonotoneN↓ f) vertices-increasing
 
-boundary↓ : ∀ {n} → (□↓ n → S) → □↑ (suc n)
-boundary↓ f = boundary f , boundary-increasing
+boundary↑ : ∀ {n} → (□↓ n → S) → □↑ (suc n)
+boundary↑ f = boundary f , boundary-increasing
 
 -------------------------------------------------------------
 
@@ -321,7 +329,7 @@ module _ where
       boundary-inv ((t , x) , P)
     )
 
-  interpolate↑-funExt : ∀ {n} (f : □↓ n → S) (x : □↓ n) → interpolate↑ (boundary↓ f) x ≡ f x
+  interpolate↑-funExt : ∀ {n} (f : □↓ n → S) (x : □↓ n) → interpolate↑ (boundary↑ f) x ≡ f x
   interpolate↑-funExt {0} _ _ = x⊔0=x ∙ refl
   interpolate↑-funExt {1} f ((s , _) , _) =
     ⊔-congR (x⊔0=x ∙ ⊓-comm) ∙
@@ -345,11 +353,107 @@ module _ where
     interpolate↑-funExt {suc n} (λ ((t , x) , P) → f ((s ⊔ t , t , x) , y≼x⊔y , P)) ((t , x) , P) ∙
     cong f (□↓≡ (≡-× (x⊔y=x s≽t) refl))
 
-boundary↓-inv : ∀ {n} (x : □↑ (suc n)) → boundary↓ (interpolate↑ x) ≡ x
-boundary↓-inv x = □↑≡ (boundary-inv x)
+boundary↑-inv : ∀ {n} (x : □↑ (suc n)) → boundary↑ (interpolate↑ x) ≡ x
+boundary↑-inv x = □↑≡ (boundary-inv x)
 
-interpolate↑-inv : ∀ {n} (f : □↓ n → S) → interpolate↑ (boundary↓ f) ≡ f
+interpolate↑-inv : ∀ {n} (f : □↓ n → S) → interpolate↑ (boundary↑ f) ≡ f
 interpolate↑-inv f = funExt (interpolate↑-funExt f)
 
 PhoaN : ∀ {n} → Iso (□↓ n → S) (□↑ (suc n))
-PhoaN = iso boundary↓ interpolate↑ boundary↓-inv interpolate↑-inv
+PhoaN = iso boundary↑ interpolate↑ boundary↑-inv interpolate↑-inv
+
+-------------------------------------------------------------
+
+private
+  data ⊥∙ (A∙ : Pointed ℓ₀) : Type ℓ₀ where
+    base : ⊥∙ A∙
+    incl : typ A∙ → ⊥∙ A∙
+    path : S → ⊥∙ A∙
+    path-0 : path s0 ≡ base
+    path-1 : path s1 ≡ incl (pt A∙)
+
+  record ElimData {ℓ A∙} (P : ⊥∙ A∙ → Type ℓ) : Type (ℓ-max ℓ ℓ₀) where
+    constructor elimdata
+    field
+      baseP : P base
+      inclP : ∀ x → P (incl x)
+      pathP : ∀ s → P (path s)
+      path-0P : PathP (λ i → P (path-0 i)) (pathP s0) baseP
+      path-1P : PathP (λ i → P (path-1 i)) (pathP s1) (inclP (pt A∙))
+  
+  elim⊥∙ : ∀ {ℓ A∙} (P : ⊥∙ A∙ → Type ℓ) → ElimData P → (x : ⊥∙ A∙) → P x
+  elim⊥∙ P (elimdata baseP _ _ _ _) base = baseP
+  elim⊥∙ P (elimdata _ inclP _ _ _) (incl x) = inclP x
+  elim⊥∙ P (elimdata _ _ pathP _ _) (path s) = pathP s
+  elim⊥∙ P (elimdata _ _ _ path-0P _) (path-0 i) = path-0P i
+  elim⊥∙ P (elimdata _ _ _ _ path-1P) (path-1 i) = path-1P i
+
+Λ∙ : ℕ → Pointed ℓ₀
+Λ∙ zero = Unit* , tt*
+Λ∙ (suc n) = ⊥∙ (Λ∙ n) , base
+
+Λ : ℕ → Type ℓ₀
+Λ n = typ (Λ∙ n)
+
+boundaryΛ : ∀ {n} → (Λ n → S) → □ (suc n)
+boundaryΛ {zero} f = f tt* , tt*
+boundaryΛ {suc n} f = f base , boundaryΛ λ x → f (incl x)
+
+boundaryΛ-increasing : ∀ {n} {f : Λ n → S} → increasing {suc n} (boundaryΛ f)
+boundaryΛ-increasing {0} = tt*
+boundaryΛ-increasing {1} {f} .fst =
+  transport
+    (cong₂ _≼_ (cong f path-0) (cong f path-1))
+    (SMonotone (λ s → f (path s)) s1-max)
+boundaryΛ-increasing {suc (suc _)} {f} .fst =
+  transport
+    (cong₂ _≼_ (cong f path-0) (cong f path-1))
+    (SMonotone (λ s → f (path s)) s1-max)
+boundaryΛ-increasing {suc _} .snd = boundaryΛ-increasing
+
+boundaryΛ↑ : ∀ {n} → (Λ n → S) → □↑ (suc n)
+boundaryΛ↑ f = boundaryΛ f , boundaryΛ-increasing
+
+interpolateΛ↑ : ∀ {n} → □↑ (suc n) → Λ n → S
+interpolateΛ↑ {0} ((s , _) , _) _ = s
+interpolateΛ↑ {suc _} ((s , _ , _) , _ , _) base = s
+interpolateΛ↑ {suc _} (_ , _ , P) (incl y) = interpolateΛ↑ (_ , P) y
+interpolateΛ↑ {1} ((s , t , _) , _) (path u) = interpolate s t u
+interpolateΛ↑ {suc (suc _)} ((s , _) , _ , P) (path u) = interpolate s (interpolateΛ↑ (_ , P) base) u
+interpolateΛ↑ {1} ((s , t , _) , _) (path-0 i) = interpolate-0 {s} {t} i
+interpolateΛ↑ {suc (suc _)} ((s , t , _) , _) (path-0 i) = interpolate-0 {s} {t} i
+interpolateΛ↑ {1} (_ , s≼t , _) (path-1 i) = interpolate-1 s≼t i
+interpolateΛ↑ {suc (suc _)} (_ , s≼t , _) (path-1 i) = interpolate-1 s≼t i
+
+boundaryΛ-inv : ∀ {n} (x : □↑ (suc n)) → boundaryΛ (interpolateΛ↑ x) ≡ fst x
+boundaryΛ-inv {zero} _ = refl
+boundaryΛ-inv {suc _} (_ , _ , P) = ≡-× refl (boundaryΛ-inv (_ , P))
+
+boundaryΛ↑-inv : ∀ {n} (x : □↑ (suc n)) → boundaryΛ↑ (interpolateΛ↑ x) ≡ x
+boundaryΛ↑-inv _ = □↑≡ (boundaryΛ-inv _)
+
+interpolateΛ↑-funExt : ∀ {n} (f : Λ n → S) (x : Λ n) → interpolateΛ↑ (boundaryΛ↑ {n} f) x ≡ f x
+interpolateΛ↑-funExt {zero} _ _ = refl
+interpolateΛ↑-funExt {suc _} _ = elim⊥∙ _ datum
+  where
+    open ElimData
+    datum : ∀ {n} {f : Λ (suc n) → S} → ElimData λ x → interpolateΛ↑ (boundaryΛ↑ {suc n} f) x ≡ f x
+    datum .baseP = refl
+    datum {zero} .inclP _ = refl
+    datum {suc _} .inclP = elim⊥∙ _ datum
+    datum {zero} {f} .pathP s =
+      sym (
+        cong (λ f → f s) (SLinear {f = λ s → f (path s)}) ∙
+        cong₃ interpolate (cong f path-0) (cong f path-1) refl)
+    datum {suc _} {f} .pathP s =
+      sym (
+        cong (λ f → f s) (SLinear {f = λ s → f (path s)}) ∙
+        cong₃ interpolate (cong f path-0) (cong f path-1) refl)
+    datum .path-0P = isProp→PathP (λ _ → SisSet _ _) _ _
+    datum .path-1P = isProp→PathP (λ _ → SisSet _ _) _ _
+
+interpolateΛ↑-inv : ∀ {n} (f : Λ n → S) → interpolateΛ↑ (boundaryΛ↑ {n} f) ≡ f
+interpolateΛ↑-inv {n} f = funExt (interpolateΛ↑-funExt {n} f)
+
+PhoaΛ : ∀ {n} → Iso (Λ n → S) (□↑ (suc n))
+PhoaΛ {n} = iso boundaryΛ↑ interpolateΛ↑ boundaryΛ↑-inv (interpolateΛ↑-inv {n})

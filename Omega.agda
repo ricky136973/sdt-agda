@@ -14,7 +14,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Nat
 open import Cubical.Data.Sequence
 
-open import Cubical.HITs.SequentialColimit renaming (elim to elim←)
+open import Cubical.HITs.SequentialColimit renaming (elim to elim→)
 
 □↑-seq : Sequence ℓ₀
 □↑-seq = sequence □↑ □↑-s1
@@ -206,14 +206,14 @@ boundary↓ω-inv : ∀ x → boundary↓ω (interpolate↑ω x) ≡ x
 boundary↓ω-inv x = □↑∞≡ (boundaryω-inv x)
 
 interpolate↑ω-funExt : ∀ f x → interpolate↑ω (boundary↓ω f) x ≡ f x
-interpolate↑ω-funExt f = elim← _ _ elimdata-funExt
+interpolate↑ω-funExt f = elim→ _ _ datum
   where
-    elimdata-funExt : ElimData _ _
-    elimdata-funExt .ElimData.inclP _ =
+    datum : ElimData _ _
+    datum .ElimData.inclP _ =
       interpolateω≡interpolateN {x = boundaryω f} ∙
       cong₂ interpolateN (boundaryω≡boundary f) refl ∙
       interpolate↑-funExt (λ x → f (incl x)) _
-    elimdata-funExt .ElimData.pushP _ = isProp→PathP (λ _ → SisSet _ _) _ _
+    datum .ElimData.pushP _ = isProp→PathP (λ _ → SisSet _ _) _ _
 
 interpolate↑ω-inv : ∀ f → interpolate↑ω (boundary↓ω f) ≡ f
 interpolate↑ω-inv f = funExt (interpolate↑ω-funExt f)
