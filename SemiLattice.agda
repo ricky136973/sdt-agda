@@ -140,107 +140,107 @@ opaque
   ⊓-cong : ∀ {w x y z} → w ≡ y → x ≡ z → w ⊓ x ≡ y ⊓ z
   ⊓-cong p q = ⊓-congL p ∙ ⊓-congR q
 
-module FiniteList where
+module Vector where
   variable ℓ ℓ' ℓ'' ℓ''' : Level
   variable A : Type ℓ
   variable B : Type ℓ'
   variable C : Type ℓ''
   variable R : A → A → Type ℓ'
 
-  FiniteList : (A : Type ℓ) → ℕ → Type ℓ
-  FiniteList A zero = Unit*
-  FiniteList A (suc n) = A × FiniteList A n
+  Vector : (A : Type ℓ) → ℕ → Type ℓ
+  Vector A zero = Unit*
+  Vector A (suc n) = A × Vector A n
 
-  drop : ∀ {n} → FiniteList A (suc n) → FiniteList A n
+  drop : ∀ {n} → Vector A (suc n) → Vector A n
   drop {n = zero} _ = tt*
   drop {n = suc _} (x , xs) = x , drop xs
 
-  append : ∀ {n} → FiniteList A n → A → FiniteList A (suc n)
+  append : ∀ {n} → Vector A n → A → Vector A (suc n)
   append {n = zero} _ y = y , tt*
   append {n = suc _} (x , xs) y = x , append xs y
 
-  reverse : ∀ {n} → FiniteList A n → FiniteList A n
+  reverse : ∀ {n} → Vector A n → Vector A n
   reverse {n = zero} _ = tt*
   reverse {n = suc n} (x , xs) = append (reverse xs) x
 
-  map : (A → B) → ∀ {n} → FiniteList A n → FiniteList B n
+  map : (A → B) → ∀ {n} → Vector A n → Vector B n
   map f {zero} _ = tt*
   map f {suc _} (x , xs) = f x , map f xs
 
-  map-comp : ∀ {n} {f : A → B} {g : B → C} {xs : FiniteList A n} →
+  map-comp : ∀ {n} {f : A → B} {g : B → C} {xs : Vector A n} →
     map g (map f xs) ≡ map (λ x → g (f x)) xs
   map-comp {n = zero} = refl
   map-comp {n = suc _} = ≡-× refl map-comp
 
-  ListR : (R : A → A → Type ℓ') → ∀ {n} → A → FiniteList A n → Type ℓ'
+  ListR : (R : A → A → Type ℓ') → ∀ {n} → A → Vector A n → Type ℓ'
   ListR R {zero} _ _ = Unit*
   ListR R {suc n} x (y , ys) = R x y × ListR R x ys
 
-  ListRRev : (R : A → A → Type ℓ') → ∀ {n} → A → FiniteList A n → Type ℓ'
+  ListRRev : (R : A → A → Type ℓ') → ∀ {n} → A → Vector A n → Type ℓ'
   ListRRev R = ListR (λ x y → R y x)
 
-  ListRIsProp : {R : A → A → Type ℓ'} → (∀ x y → isProp (R x y)) → ∀ {n x} {y : FiniteList A n} → isProp (ListR R x y)
+  ListRIsProp : {R : A → A → Type ℓ'} → (∀ x y → isProp (R x y)) → ∀ {n x} {y : Vector A n} → isProp (ListR R x y)
   ListRIsProp _ {zero} = isPropUnit*
   ListRIsProp P {suc n} = isProp× (P _ _) (ListRIsProp P)
 
-  ListR-trans : ∀ {n} {x y} {zs : FiniteList A n} →
+  ListR-trans : ∀ {n} {x y} {zs : Vector A n} →
     (∀ x y z → R x y → R y z → R x z) → R x y → ListR R y zs → ListR R x zs
   ListR-trans {n = zero} _ _ _ = tt*
   ListR-trans {n = suc _} R-trans Rxy (Ryz , P) = R-trans _ _ _ Rxy Ryz , ListR-trans R-trans Rxy P
 
-  ListR-append : ∀ {n x} {ys : FiniteList A n} {z} → ListR R x ys → R x z → ListR R x (append ys z)
+  ListR-append : ∀ {n x} {ys : Vector A n} {z} → ListR R x ys → R x z → ListR R x (append ys z)
   ListR-append {n = zero} _ Rxz = Rxz , tt*
   ListR-append {n = suc _} (Rxy , P) Rxz = Rxy , ListR-append P Rxz
 
-  ListR-reverse : ∀ {n x} {ys : FiniteList A n} → ListR R x ys → ListR R x (reverse ys)
+  ListR-reverse : ∀ {n x} {ys : Vector A n} → ListR R x ys → ListR R x (reverse ys)
   ListR-reverse {n = zero} _ = tt*
   ListR-reverse {n = suc n} {x = x} {ys = y , ys} (Rxy , P) = ListR-append (ListR-reverse P) Rxy
 
-  IsMonotonic : {A : Type ℓ} (R : A → A → Type ℓ') → ∀ {n} → FiniteList A n → Type (ℓ-max ℓ ℓ')
+  IsMonotonic : {A : Type ℓ} (R : A → A → Type ℓ') → ∀ {n} → Vector A n → Type (ℓ-max ℓ ℓ')
   IsMonotonic R {0} _ = Unit*
   IsMonotonic R {1} _ = Unit*
   IsMonotonic R {suc (suc n)} (x , y , z) = (R x y) × (IsMonotonic R (y , z))
   
   IsMonotonicIsProp :{A : Type ℓ} {R : A → A → Type ℓ'}
     → (∀ x y → isProp (R x y))
-    → ∀ {n} {x : FiniteList A n} → isProp (IsMonotonic R x)
+    → ∀ {n} {x : Vector A n} → isProp (IsMonotonic R x)
   IsMonotonicIsProp _ {0} = isPropUnit*
   IsMonotonicIsProp _ {1} = isPropUnit*
   IsMonotonicIsProp RisProp {suc (suc _)} = isProp× (RisProp _ _) (IsMonotonicIsProp RisProp)
 
-  IsMonotonic-trans : ∀ {n} {x y} {zs : FiniteList A n} →
+  IsMonotonic-trans : ∀ {n} {x y} {zs : Vector A n} →
     (∀ x y z → R x y → R y z → R x z) → R x y → IsMonotonic R (y , zs) → IsMonotonic R (x , zs)
   IsMonotonic-trans {n = zero} _ _ _ = tt*
   IsMonotonic-trans {n = suc _} R-trans Rxy (Ryz , P) = R-trans _ _ _ Rxy Ryz , P
 
-  ListRFromMonotone : ∀ {n} {xs : FiniteList A (suc n)} →
+  ListRFromMonotone : ∀ {n} {xs : Vector A (suc n)} →
     (∀ x y z → R x y → R y z → R x z) → IsMonotonic R xs → ListR R (fst xs) (snd xs)
   ListRFromMonotone {n = 0} _ _ = tt*
   ListRFromMonotone {n = suc _} R-trans (Rxy , P) = Rxy , ListRFromMonotone R-trans (IsMonotonic-trans R-trans Rxy P)
 
-  head-monotone : ∀ {n} {x : A} {ys : FiniteList A n} →
+  head-monotone : ∀ {n} {x : A} {ys : Vector A n} →
     ListR R x ys → IsMonotonic R ys → IsMonotonic R (x , ys)
   head-monotone {n = zero} _ _ = tt*
   head-monotone {n = suc _} (x≼y , _) Q = x≼y , Q
 
-  tail-monotone : ∀ {n} {xs : FiniteList A (suc n)} →
+  tail-monotone : ∀ {n} {xs : Vector A (suc n)} →
     IsMonotonic R xs → IsMonotonic R (snd xs)
   tail-monotone {n = zero} P = tt*
   tail-monotone {n = suc _} (_ , P) = P
 
-  drop-monotone : ∀ {n} {xs : FiniteList A (suc n)} →
+  drop-monotone : ∀ {n} {xs : Vector A (suc n)} →
     IsMonotonic R xs → IsMonotonic R (drop xs)
   drop-monotone {n = 0} _ = tt*
   drop-monotone {n = 1} _ = tt*
   drop-monotone {n = suc (suc n)} (Rxy , P) = Rxy , drop-monotone P
 
-  append-monotone : ∀ {n} {xs : FiniteList A n} {y : A} →
+  append-monotone : ∀ {n} {xs : Vector A n} {y : A} →
     IsMonotonic R xs → ListRRev R y xs → IsMonotonic R (append xs y)
   append-monotone {n = 0} _ _ = tt*
   append-monotone {n = 1} _ (Rxy , _) = Rxy , tt*
   append-monotone {n = suc (suc _)} (Rxx' , P) (_ , Q) = Rxx' , append-monotone P Q
 
-  reverse-monotone : ∀ {n} {xs : FiniteList A n} →
+  reverse-monotone : ∀ {n} {xs : Vector A n} →
     (∀ x y z → R x y → R y z → R x z) → IsMonotonic R xs → IsMonotonic (λ x y → R y x) (reverse xs)
   reverse-monotone {n = zero} _ _ = tt*
   reverse-monotone {n = suc _} {xs = x , xs} R-trans P =
@@ -250,16 +250,16 @@ module FiniteList where
     {R : A → A → Type ℓ''}
     {R' : B → B → Type ℓ'''}
     (f : A → B) (r : ∀ x y → R x y → R' (f x) (f y))
-    {n} {x : FiniteList A n} →
+    {n} {x : Vector A n} →
     IsMonotonic R x → IsMonotonic R' (map f x)
   map-monotone _ _ {0} _ = tt*
   map-monotone _ _ {1} _ = tt*
   map-monotone _ r {suc (suc _)} (Rxy , P) = r _ _ Rxy , map-monotone _ r P
 
-open FiniteList
+open Vector
 
 □ : ℕ → Type ℓ₀
-□ = FiniteList S
+□ = Vector S
 
 δ : ∀ {n} → S → □ n
 δ {zero} _ = tt*

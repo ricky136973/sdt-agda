@@ -121,7 +121,7 @@ _∞≽∞_ : □∞ → □∞ → Type ℓ₀
 x ∞≽∞ y = y ∞≼∞ x
 
 module _ where
-  open FiniteList
+  open Vector
 
   boundaryω : (□↓ω → S) → □∞
   boundaryω f n = f (incl (δ↓ {n} s1))
@@ -180,7 +180,7 @@ interpolateω≡interpolateN : ∀ {n x} {y : □ n} → interpolateω x y ≡ i
 interpolateω≡interpolateN = ⊔-congR zipω≡zip
 
 module _ where
-  open FiniteList
+  open Vector
 
   zipω-push : ∀ {n x} {y : □ n} → zipω x y ≡ zipω x (append y s0)
   zipω-push {zero} = sym (x⊔y=y x⊓y≼y)

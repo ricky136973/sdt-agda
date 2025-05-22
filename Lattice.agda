@@ -154,7 +154,7 @@ opaque
   □≼□-antisym {suc _} (P , Q) (R , S) = ≡-× (≼-antisym P R) (□≼□-antisym Q S)
 
 module _ where
-  open FiniteList
+  open Vector
 
   □-map : ∀ {n} → (S → S) → □ n → □ n
   □-map f = map f
@@ -254,9 +254,9 @@ SMonotoneN↓ f x≼y =
 -------------------------------------------------------------
 
 module _ where
-  open FiniteList
+  open Vector
 
-  vertices : ∀ n → FiniteList (□↓ n) (suc n)
+  vertices : ∀ n → Vector (□↓ n) (suc n)
   vertices zero = (tt* , tt*) , tt*
   vertices (suc _) = δ↓ s0 , map □↓-s1 (vertices _)
 
@@ -306,7 +306,7 @@ interpolate↑ (x , _) (y , _) = interpolateN x y
 -------------------------------------------------------------
 
 module _ where
-  open FiniteList
+  open Vector
 
   boundary-inv : ∀ {n} (x : □↑ (suc n)) → boundary (interpolate↑ x) ≡ fst x
   boundary-inv {zero} _ = ≡-× x⊔0=x refl
