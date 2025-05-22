@@ -160,8 +160,8 @@ module _ where
       δ1-□↓-s0 {zero} = s1-max , tt*
       δ1-□↓-s0 {suc _} = s1-max , δ1-□↓-s0
 
-boundary↓ω : (□↓ω → S) → □↑∞
-boundary↓ω f = boundaryω f , boundaryω-increasing {f}
+boundary↑ω : (□↓ω → S) → □↑∞
+boundary↑ω f = boundaryω f , boundaryω-increasing {f}
 
 -------------------------------------------------------------
 
@@ -202,10 +202,10 @@ boundaryω-inv (x , P) (suc n) =
   ⊔-congL (⊔-congR x⊓1=x ∙ x⊔y=y (P 0)) ∙
   boundaryω-inv (□↑∞-d0 (x , P)) n
 
-boundary↓ω-inv : ∀ x → boundary↓ω (interpolate↑ω x) ≡ x
-boundary↓ω-inv x = □↑∞≡ (boundaryω-inv x)
+boundary↑ω-inv : ∀ x → boundary↑ω (interpolate↑ω x) ≡ x
+boundary↑ω-inv x = □↑∞≡ (boundaryω-inv x)
 
-interpolate↑ω-funExt : ∀ f x → interpolate↑ω (boundary↓ω f) x ≡ f x
+interpolate↑ω-funExt : ∀ f x → interpolate↑ω (boundary↑ω f) x ≡ f x
 interpolate↑ω-funExt f = elim→ _ _ datum
   where
     datum : ElimData _ _
@@ -215,8 +215,69 @@ interpolate↑ω-funExt f = elim→ _ _ datum
       interpolate↑-funExt (λ x → f (incl x)) _
     datum .ElimData.pushP _ = isProp→PathP (λ _ → SisSet _ _) _ _
 
-interpolate↑ω-inv : ∀ f → interpolate↑ω (boundary↓ω f) ≡ f
+interpolate↑ω-inv : ∀ f → interpolate↑ω (boundary↑ω f) ≡ f
 interpolate↑ω-inv f = funExt (interpolate↑ω-funExt f)
 
 Phoaω : Iso (□↓ω → S) □↑∞
-Phoaω = iso boundary↓ω interpolate↑ω boundary↓ω-inv interpolate↑ω-inv
+Phoaω = iso boundary↑ω interpolate↑ω boundary↑ω-inv interpolate↑ω-inv
+
+-------------------------------------------------------------
+
+data Λω : Type ℓ₀ where
+  step : ℕ → Λω
+  succ : ℕ → S → Λω
+  succ-0 : ∀ n → succ n s0 ≡ step n
+  succ-1 : ∀ n → succ n s1 ≡ step (suc n)
+
+record ElimDataΛω {ℓ} (P : Λω → Type ℓ) : Type (ℓ-max ℓ ℓ₀) where
+  constructor elimdataΛω
+  field
+    stepP : ∀ n → P (step n)
+    succP : ∀ n s → P (succ n s)
+    succ-0P : ∀ n → PathP (λ i → P (succ-0 n i)) (succP n s0) (stepP n)
+    succ-1P : ∀ n → PathP (λ i → P (succ-1 n i)) (succP n s1) (stepP (suc n))
+
+elimΛω : ∀ {ℓ} (P : Λω → Type ℓ) → ElimDataΛω P → (x : Λω) → P x
+elimΛω _ (elimdataΛω stepP _ _ _) (step _) = stepP _
+elimΛω _ (elimdataΛω _ succP _ _) (succ _ _) = succP _ _
+elimΛω _ (elimdataΛω _ _ succ-0P _) (succ-0 _ i) = succ-0P _ i
+elimΛω _ (elimdataΛω _ _ _ succ-1P) (succ-1 _ i) = succ-1P _ i
+
+boundaryΛω : (Λω → S) → □∞
+boundaryΛω f n = f (step n)
+
+boundaryΛω-increasing : ∀ {f} → increasing∞ (boundaryΛω f)
+boundaryΛω-increasing {f} n =
+  transport
+    (cong₂ _≼_ (cong f (succ-0 n)) (cong f (succ-1 n)))
+    (f0≼f1 (λ s → f (succ n s)))
+
+boundaryΛ↑ω : (Λω → S) → □↑∞
+boundaryΛ↑ω f = boundaryΛω f , boundaryΛω-increasing {f}
+
+interpolateΛ↑ω : □↑∞ → Λω → S
+interpolateΛ↑ω (x , _) (step n) = x n
+interpolateΛ↑ω (x , _) (succ n s) = interpolate (x n) (x (suc n)) s
+interpolateΛ↑ω (x , _) (succ-0 n i) = interpolate-0 (x n) (x (suc n)) i
+interpolateΛ↑ω (_ , P) (succ-1 n i) = interpolate-1 (P n) i
+
+boundaryΛ↑ω-inv : ∀ x → boundaryΛ↑ω (interpolateΛ↑ω x) ≡ x
+boundaryΛ↑ω-inv _ = □↑∞≡ λ _ → refl
+
+interpolateΛ↑ω-funExt : ∀ f x → interpolateΛ↑ω (boundaryΛ↑ω f) x ≡ f x
+interpolateΛ↑ω-funExt f = elimΛω _ datum
+  where
+    datum : ElimDataΛω _
+    datum .ElimDataΛω.stepP _ = refl
+    datum .ElimDataΛω.succP n s =
+      sym (
+        cong (λ f → f s) (SLinear {λ s → f (succ n s)}) ∙
+        cong₃ interpolate (cong f (succ-0 _)) (cong f (succ-1 _)) refl)
+    datum .ElimDataΛω.succ-0P _ = isProp→PathP (λ _ → SisSet _ _) _ _
+    datum .ElimDataΛω.succ-1P _ = isProp→PathP (λ _ → SisSet _ _) _ _
+
+interpolateΛ↑ω-inv : ∀ f → interpolateΛ↑ω (boundaryΛ↑ω f) ≡ f
+interpolateΛ↑ω-inv _ = funExt (interpolateΛ↑ω-funExt _)
+
+PhoaΛω : Iso (Λω → S) □↑∞
+PhoaΛω = iso boundaryΛ↑ω interpolateΛ↑ω boundaryΛ↑ω-inv interpolateΛ↑ω-inv

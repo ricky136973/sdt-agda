@@ -75,10 +75,6 @@ A ⇀ B = A → L B
 map : (A → B) → L A → L B
 map f (s , a) = s , λ φ → f (a φ)
 
-step : (L A → A) → ℕ → A
-step α zero = α L⊥
-step α (suc n) = α (η (step α n))
-
 data ω : Type ℓ₀ where
   σ : L ω → ω
 
@@ -91,10 +87,6 @@ data ω : Type ℓ₀ where
 ℕ→ω : ℕ → ω
 ℕ→ω zero = ω-zero
 ℕ→ω (suc n) = ω-suc (ℕ→ω n)
-
-ℕ→ω≡step : ℕ→ω ≡ step σ
-ℕ→ω≡step i zero = ω-zero
-ℕ→ω≡step i (suc n) = ω-suc (ℕ→ω≡step i n)
 
 record ϖ : Type ℓ₀ where
   coinductive

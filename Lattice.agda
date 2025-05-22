@@ -100,8 +100,8 @@ interpolate : S → S → S → S
 interpolate s t x = s ⊔ x ⊓ t
 
 opaque
-  interpolate-0 : ∀ {s t} → interpolate s t s0 ≡ s
-  interpolate-0 = x⊔y=x (≼-trans x⊓y≼x s0-min)
+  interpolate-0 : ∀ s t → interpolate s t s0 ≡ s
+  interpolate-0 _ _ = x⊔y=x (≼-trans x⊓y≼x s0-min)
 
   interpolate-1 : ∀ {s t} → s ≼ t → interpolate s t s1 ≡ t
   interpolate-1 s≼t = x⊔y=y (⊓-intro s1-max s≼t) ∙ 1⊓x=x
@@ -111,6 +111,9 @@ postulate SLinear : {f : S → S} → f ≡ interpolate (f s0) (f s1)
 SMonotone : ∀ {x y} (f : S → S) → x ≼ y → f x ≼ f y
 SMonotone {x} {y} f x≼y =
   transport (sym (cong (λ f → f x ≼ f y) SLinear)) (⊔-monotoneR (⊓-monotoneL x≼y))
+
+f0≼f1 : (f : S → S) → f s0 ≼ f s1
+f0≼f1 f = SMonotone f s1-max
 
 SFunExt : ∀ {f g : S → S} → f s0 ≡ g s0 → f s1 ≡ g s1 → f ≡ g
 SFunExt {f} {g} p q =
@@ -382,11 +385,11 @@ private
       path-1P : PathP (λ i → P (path-1 i)) (pathP s1) (inclP (pt A∙))
   
   elim⊥∙ : ∀ {ℓ A∙} (P : ⊥∙ A∙ → Type ℓ) → ElimData P → (x : ⊥∙ A∙) → P x
-  elim⊥∙ P (elimdata baseP _ _ _ _) base = baseP
-  elim⊥∙ P (elimdata _ inclP _ _ _) (incl x) = inclP x
-  elim⊥∙ P (elimdata _ _ pathP _ _) (path s) = pathP s
-  elim⊥∙ P (elimdata _ _ _ path-0P _) (path-0 i) = path-0P i
-  elim⊥∙ P (elimdata _ _ _ _ path-1P) (path-1 i) = path-1P i
+  elim⊥∙ _ (elimdata baseP _ _ _ _) base = baseP
+  elim⊥∙ _ (elimdata _ inclP _ _ _) (incl x) = inclP x
+  elim⊥∙ _ (elimdata _ _ pathP _ _) (path s) = pathP s
+  elim⊥∙ _ (elimdata _ _ _ path-0P _) (path-0 i) = path-0P i
+  elim⊥∙ _P (elimdata _ _ _ _ path-1P) (path-1 i) = path-1P i
 
 Λ∙ : ℕ → Pointed ℓ₀
 Λ∙ zero = Unit* , tt*
@@ -404,11 +407,11 @@ boundaryΛ-increasing {0} = tt*
 boundaryΛ-increasing {1} {f} .fst =
   transport
     (cong₂ _≼_ (cong f path-0) (cong f path-1))
-    (SMonotone (λ s → f (path s)) s1-max)
+    (f0≼f1 (λ s → f (path s)))
 boundaryΛ-increasing {suc (suc _)} {f} .fst =
   transport
     (cong₂ _≼_ (cong f path-0) (cong f path-1))
-    (SMonotone (λ s → f (path s)) s1-max)
+    (f0≼f1 (λ s → f (path s)))
 boundaryΛ-increasing {suc _} .snd = boundaryΛ-increasing
 
 boundaryΛ↑ : ∀ {n} → (Λ n → S) → □↑ (suc n)
@@ -420,8 +423,8 @@ interpolateΛ↑ {suc _} ((s , _ , _) , _ , _) base = s
 interpolateΛ↑ {suc _} (_ , _ , P) (incl y) = interpolateΛ↑ (_ , P) y
 interpolateΛ↑ {1} ((s , t , _) , _) (path u) = interpolate s t u
 interpolateΛ↑ {suc (suc _)} ((s , _) , _ , P) (path u) = interpolate s (interpolateΛ↑ (_ , P) base) u
-interpolateΛ↑ {1} ((s , t , _) , _) (path-0 i) = interpolate-0 {s} {t} i
-interpolateΛ↑ {suc (suc _)} ((s , t , _) , _) (path-0 i) = interpolate-0 {s} {t} i
+interpolateΛ↑ {1} ((s , t , _) , _) (path-0 i) = interpolate-0 s t i
+interpolateΛ↑ {suc (suc _)} ((s , t , _) , _) (path-0 i) = interpolate-0 s t i
 interpolateΛ↑ {1} (_ , s≼t , _) (path-1 i) = interpolate-1 s≼t i
 interpolateΛ↑ {suc (suc _)} (_ , s≼t , _) (path-1 i) = interpolate-1 s≼t i
 
