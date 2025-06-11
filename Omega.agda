@@ -48,7 +48,7 @@ SMonotoneω f = SMonotoneN↓ λ x → f (incl x)
 □∞-tail x n = x (suc n)
 
 □∞-proj : ∀ n → □∞ → □ n
-□∞-proj zero x = tt*
+□∞-proj zero _ = tt*
 □∞-proj (suc n) x = x 0 , □∞-proj n (□∞-tail x)
 
 increasing∞ : □∞ → Type ℓ₀
@@ -267,14 +267,15 @@ boundaryΛ↑ω-inv _ = □↑∞≡ λ _ → refl
 interpolateΛ↑ω-funExt : ∀ f x → interpolateΛ↑ω (boundaryΛ↑ω f) x ≡ f x
 interpolateΛ↑ω-funExt f = elimΛω _ datum
   where
+    open ElimDataΛω
     datum : ElimDataΛω _
-    datum .ElimDataΛω.stepP _ = refl
-    datum .ElimDataΛω.succP n s =
+    datum .stepP _ = refl
+    datum .succP n s =
       sym (
         cong (λ f → f s) (SLinear {λ s → f (succ n s)}) ∙
         cong₃ interpolate (cong f (succ-0 _)) (cong f (succ-1 _)) refl)
-    datum .ElimDataΛω.succ-0P _ = isProp→PathP (λ _ → SisSet _ _) _ _
-    datum .ElimDataΛω.succ-1P _ = isProp→PathP (λ _ → SisSet _ _) _ _
+    datum .succ-0P _ = isProp→PathP (λ _ → SisSet _ _) _ _
+    datum .succ-1P _ = isProp→PathP (λ _ → SisSet _ _) _ _
 
 interpolateΛ↑ω-inv : ∀ f → interpolateΛ↑ω (boundaryΛ↑ω f) ≡ f
 interpolateΛ↑ω-inv _ = funExt (interpolateΛ↑ω-funExt _)

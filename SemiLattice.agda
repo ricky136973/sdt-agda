@@ -199,7 +199,7 @@ module Vector where
   IsMonotonic : {A : Type ℓ} (R : A → A → Type ℓ') → ∀ {n} → Vector A n → Type (ℓ-max ℓ ℓ')
   IsMonotonic R {0} _ = Unit*
   IsMonotonic R {1} _ = Unit*
-  IsMonotonic R {suc (suc n)} (x , y , z) = (R x y) × (IsMonotonic R (y , z))
+  IsMonotonic R {suc (suc _)} (x , y , z) = (R x y) × (IsMonotonic R (y , z))
   
   IsMonotonicIsProp :{A : Type ℓ} {R : A → A → Type ℓ'}
     → (∀ x y → isProp (R x y))

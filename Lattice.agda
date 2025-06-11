@@ -389,7 +389,7 @@ private
   elim⊥∙ _ (elimdata _ inclP _ _ _) (incl x) = inclP x
   elim⊥∙ _ (elimdata _ _ pathP _ _) (path s) = pathP s
   elim⊥∙ _ (elimdata _ _ _ path-0P _) (path-0 i) = path-0P i
-  elim⊥∙ _P (elimdata _ _ _ _ path-1P) (path-1 i) = path-1P i
+  elim⊥∙ _ (elimdata _ _ _ _ path-1P) (path-1 i) = path-1P i
 
 Λ∙ : ℕ → Pointed ℓ₀
 Λ∙ zero = Unit* , tt*
