@@ -122,11 +122,11 @@ SFunExt {f} {g} p q =
 Phoa : Iso (S → S) (□↓ 2)
 Phoa .Iso.fun f = (f s1 , f s0 , tt*) , SMonotone f s1-max , tt*
 Phoa .Iso.inv ((t , s , _) , _) = interpolate s t
-Phoa .Iso.rightInv ((t , s , _) , P , _) =
+Phoa .Iso.sec ((t , s , _) , P , _) =
   □↓≡ ((≡-×
     ((x⊔y=y (≼-trans P (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)
     (≡-× (x⊔y=x (≼-trans x⊓y≼x s0-min)) refl)))
-Phoa .Iso.leftInv f =
+Phoa .Iso.ret f =
   SFunExt
     (x⊔y=x (≼-trans (≼-reflP 0⊓x=0) s0-min))
     ((x⊔y=y (≼-trans (SMonotone f s1-max) (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)
