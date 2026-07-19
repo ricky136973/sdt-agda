@@ -1,3 +1,3 @@
 # SDT Agda
 
-This repo contains the formalisation code for the MPhil project *Topology in Synthetic Domain Theory and its Formalisation in Agda*. The code relies on an unmerged patch to the Cubical Agda library. The patched version is included with the codebase for anonymous reviews.
+This repo contains the formalisation code for the research project *Topology in Synthetic Domain Theory and its Formalisation in Agda* submitted for the Master of Philosophy in Advanced Computer Science degree at the University of Cambridge. The code relies on an unmerged patch to the Cubical Agda library, which is included as a submodule in this repo under the `cubical` directory. The patch is unlikely to be merged into the main Cubical Agda library in the foreseeable future.

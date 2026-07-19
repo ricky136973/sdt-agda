@@ -1,5 +1,3 @@
-{-# OPTIONS --cubical --guardedness #-}
-
 module SemiLattice where
 
 open import PreSDT renaming (def to ⟦_⟧ ; map to L-map) public
@@ -70,11 +68,12 @@ opaque
   SΣ-φ : ∀ {s t φ} → SΣ (s , t) ≡ t φ
   SΣ-φ {_} {t} {φ} = defIsMono (SΣ-def ∙ isoToPath SΣ-φ≅)
     where
+      open Iso
       SΣ-φ≅ : Iso (Σ[ φ ∈ _ ] ⟦ t φ ⟧) ⟦ t φ ⟧
-      SΣ-φ≅ .Iso.fun (_ , y) = transport (cong (λ φ → ⟦ t φ ⟧) (defIsProp _ _)) y
-      SΣ-φ≅ .Iso.inv = _,_ φ
-      SΣ-φ≅ .Iso.sec _ = defIsProp _ _
-      SΣ-φ≅ .Iso.ret _ = isPropΣ defIsProp (λ _ → defIsProp) _ _
+      SΣ-φ≅ .fun (_ , y) = transport (cong (λ φ → ⟦ t φ ⟧) (defIsProp _ _)) y
+      SΣ-φ≅ .inv = _,_ φ
+      SΣ-φ≅ .rightInv _ = defIsProp _ _
+      SΣ-φ≅ .leftInv _ = isPropΣ defIsProp (λ _ → defIsProp) _ _
 
 _⊓_ : S → S → S
 x ⊓ y = SΣ (x , λ _ → y)
@@ -414,12 +413,12 @@ L□↓≅□↓ : ∀ {n} → Iso (L (□↓ n)) (□↓ (suc n))
 L□↓≅□↓ .Iso.fun = L□↓→□↓
 L□↓≅□↓ .Iso.inv = □↓→L□↓
 
-L□↓≅□↓ {zero} .Iso.sec _ = refl
-L□↓≅□↓ {suc _} .Iso.sec (_ , P , Q) =
+L□↓≅□↓ {zero} .Iso.rightInv _ = refl
+L□↓≅□↓ {suc _} .Iso.rightInv (_ , P , Q) =
   □↓≡ (≡-× refl (≡-× (x⊓y=y P) (L□→□≡ (decreasing→≽□ (decreasing-≽ P Q)))))
 
-L□↓≅□↓ {zero} .Iso.ret _ = refl
-L□↓≅□↓ {suc n} .Iso.ret (s , t) =
+L□↓≅□↓ {zero} .Iso.leftInv _ = refl
+L□↓≅□↓ {suc n} .Iso.leftInv (s , t) =
   ≡-Σ refl (funExt (λ φ → □↓≡ (≡-× SΣ-φ (L□→□≡φ (λ φ → decreasing→≽□ (decreasing-≽ (λ _ → φ) (t φ .snd)))))))
 
 L□↓≡□↓ : ∀ {n} → L (□↓ n) ≡ □↓ (suc n)

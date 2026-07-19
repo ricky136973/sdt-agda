@@ -1,5 +1,3 @@
-{-# OPTIONS --cubical --guardedness #-}
-
 module Lattice where
 
 open import SemiLattice public
@@ -66,7 +64,7 @@ opaque
 
   ⊔-assoc : ∀ {x y z} → x ⊔ (y ⊔ z) ≡ (x ⊔ y) ⊔ z
   ⊔-assoc =
-    defIsMono (⊔-def ∙ (cong (_⊎_ _) ⊔-def) ∙ sym (⊔-def ∙ cong (λ P → P ⊎ _) ⊔-def ∙ join-assoc _ _ _))
+    defIsMono (⊔-def ∙ (cong (_ ⊎_) ⊔-def) ∙ sym (⊔-def ∙ cong (_⊎ _) ⊔-def ∙ join-assoc _ _ _))
 
   ⊔-monotoneL : ∀ {x y z} → x ≼ y → x ⊔ z ≼ y ⊔ z
   ⊔-monotoneL x≼y φ =
@@ -122,11 +120,11 @@ SFunExt {f} {g} p q =
 Phoa : Iso (S → S) (□↓ 2)
 Phoa .Iso.fun f = (f s1 , f s0 , tt*) , SMonotone f s1-max , tt*
 Phoa .Iso.inv ((t , s , _) , _) = interpolate s t
-Phoa .Iso.sec ((t , s , _) , P , _) =
+Phoa .Iso.rightInv ((t , s , _) , P , _) =
   □↓≡ ((≡-×
     ((x⊔y=y (≼-trans P (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)
     (≡-× (x⊔y=x (≼-trans x⊓y≼x s0-min)) refl)))
-Phoa .Iso.ret f =
+Phoa .Iso.leftInv f =
   SFunExt
     (x⊔y=x (≼-trans (≼-reflP 0⊓x=0) s0-min))
     ((x⊔y=y (≼-trans (SMonotone f s1-max) (≼-reflP (sym 1⊓x=x)))) ∙ 1⊓x=x)

@@ -1,0 +1,3 @@
+[submodule "cubical"]
+	path = cubical
+	url = git@github.com:ricky136973/cubical.git

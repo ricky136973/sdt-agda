@@ -1,5 +1,3 @@
-{-# OPTIONS --cubical --guardedness #-}
-
 module PreSDT where
 
 open import Orthogonal

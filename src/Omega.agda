@@ -1,5 +1,3 @@
-{-# OPTIONS --cubical --guardedness #-}
-
 module Omega where
 
 open import Lattice public
